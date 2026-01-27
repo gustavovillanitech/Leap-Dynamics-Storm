@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Javascript/">
     <File Path="Javascript/new_opportunity_form.js" />
+    <File Path="new_OpportunityQuickCreateLogic.js" />
   </Folder>
 </Solution>
