@@ -11,7 +11,6 @@ OpportunityForm.onLoad = function(executionContext) {
     var formContext = executionContext.getFormContext();
 
     // SAFETY FIX: Ensure the ticketing stage is unlocked on load 
-    // (In case it was stuck from the old script)
     var ticketingCtrl = formContext.getControl("new_ticketingstage");
     if (ticketingCtrl) {
         ticketingCtrl.setDisabled(false);
@@ -123,10 +122,10 @@ OpportunityForm.setRequiredFields = function(formContext) {
     var isRequired = false;
 
     // RULE 1: Ticketing - New FSE (100000000)
-    // Mandatory when Product is Deposit (100000008), Partial (100000010), or Flex (100000011)
-    // And Stage is 3-Presented (100000003), 4-Awaiting (100000004), or Closed Won (100000005)
+    // Mandatory ONLY when Product is Deposit (100000008)
+    // Partial (100000010) and Flex (100000011) removed per request
     if (oppType === 100000000) {
-        var prodTypesR1 = [100000008, 100000010, 100000011]; 
+        var prodTypesR1 = [100000008]; 
         var stagesR1 = [100000003, 100000004, 100000005];
         
         if (prodTypesR1.indexOf(prodType) > -1 && stagesR1.indexOf(stage) > -1) {
@@ -135,8 +134,6 @@ OpportunityForm.setRequiredFields = function(formContext) {
     }
 
     // RULE 2: Ticketing - Groups (100000001)
-    // Mandatory when Product is Groups (100000001)
-    // And Stage is 3-Seats Reserved (100000007) or Closed Won (100000005)
     if (!isRequired && oppType === 100000001) {
         var stagesR2 = [100000007, 100000005];
         if (prodType === 100000001 && stagesR2.indexOf(stage) > -1) {
@@ -145,7 +142,6 @@ OpportunityForm.setRequiredFields = function(formContext) {
     }
 
     // RULE 3: Ticketing - New FSE (100000000) + Premium Hospitality (100000012)
-    // Mandatory when Stage is 2-Pitched (100000011), 3-Internal (100000012), 4-Post Mtg (100000013), or Closed Won (100000005)
     if (!isRequired && oppType === 100000000 && prodType === 100000012) {
         var stagesR3 = [100000011, 100000012, 100000013, 100000005];
         if (stagesR3.indexOf(stage) > -1) {
@@ -166,11 +162,11 @@ OpportunityForm.filterProductDetail = function(formContext) {
     var type = attr.getValue();
     
     var map = {
-        100000008: [100000000, 100000001, 100000002], // Deposit -> Season, Groups, Hospitality
-        100000001: [100000003, 100000004, 100000005], // Groups -> Marquee, Standard, Value
-        100000012: [100000006, 100000007, 100000008, 100000009, 100000010, 100000011, 100000012], // Hospitality -> Suites...
-        100000010: [100000013, 100000014, 100000015, 100000016, 100000017], // Partial Plans
-        100000011: [100000018, 100000019] // Flexible Plans
+        100000008: [100000000, 100000001, 100000002], 
+        100000001: [100000003, 100000004, 100000005], 
+        100000012: [100000006, 100000007, 100000008, 100000009, 100000010, 100000011, 100000012], 
+        100000010: [100000013, 100000014, 100000015, 100000016, 100000017], 
+        100000011: [100000018, 100000019] 
     };
     
     ctrl.clearOptions();
@@ -184,5 +180,22 @@ OpportunityForm.filterProductDetail = function(formContext) {
         detAttr.setValue(null);
     }
 
+    // Run the requirement logic check
     OpportunityForm.setRequiredFields(formContext);
+};
+
+OpportunityForm.onSave = function(executionContext) {
+    var formContext = executionContext.getFormContext();
+    
+    // Refresh Timeline
+    OpportunityForm.refreshTimeline(formContext);
+};
+
+OpportunityForm.refreshTimeline = function(formContext) {
+    setTimeout(function () {
+        var timelineControl = formContext.getControl("Timeline");
+        if (timelineControl) {
+            timelineControl.refresh();
+        }
+    }, 2500);
 };
