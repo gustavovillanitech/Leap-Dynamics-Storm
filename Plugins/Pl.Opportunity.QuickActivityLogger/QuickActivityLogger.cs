@@ -37,18 +37,53 @@ namespace Pl.Opportunity.QuickActivityLogger
 					DateTime? dueDate = targetOpp.GetAttributeValue<DateTime?>("new_activityduedate") ?? DateTime.UtcNow;
 
 					string activityLogicalName = "";
+					int? subStatusValue = null;
+					int? engagementTypeValue = null;
+					bool markAsCompleted = true; // All completed for default
 					switch (activityType.Value)
 					{
 						case 100000000: activityLogicalName = "phonecall"; break;
 						case 100000001: activityLogicalName = "task"; break;
-						case 100000002: activityLogicalName = "appointment"; break;
 						case 100000003: activityLogicalName = "email"; break;
+
+						// APPOINTMENTS
+						case 100000002: // Attended Meeting
+							activityLogicalName = "appointment";
+							subStatusValue = 100000001; // Attended
+							break;
+						case 100000004: //"Set Meeting"
+							activityLogicalName = "appointment";
+							subStatusValue = 100000000; // Set
+							markAsCompleted = false;
+							break;
+
+						// ENGAGEMENTS
+						case 100000005: // Text Message
+							activityLogicalName = "new_engagement";
+							engagementTypeValue = 100000000;
+							break;
+						case 100000006: // Event Engagement
+							activityLogicalName = "new_engagement";
+							engagementTypeValue = 100000001;
+							break;
+						case 100000007: // Game Engagement
+							activityLogicalName = "new_engagement";
+							engagementTypeValue = 100000002;
+							break;
+
 					}
 
 					if (!string.IsNullOrEmpty(activityLogicalName))
 					{
 						tracingService.Trace("Mapping activity type: {0}", activityLogicalName);
 						Entity activity = new Entity(activityLogicalName);
+
+						if (subStatusValue != null)
+							activity["new_substatus"] = new OptionSetValue(subStatusValue.Value);
+
+						if (engagementTypeValue != null)
+							activity["new_engagementtype"] = new OptionSetValue(engagementTypeValue.Value);
+
 						activity["subject"] = $"Quick Log: {activityLogicalName} - {fullOpp.GetAttributeValue<string>("name")}";
 						activity["description"] = details;
 						activity["regardingobjectid"] = targetOpp.ToEntityReference();
@@ -66,15 +101,22 @@ namespace Pl.Opportunity.QuickActivityLogger
 						tracingService.Trace("Activity created with ID: {0}", activityId);
 
 						tracingService.Trace("Updating activity status to Completed.");
-						Entity updateStatus = new Entity(activityLogicalName, activityId);
-						updateStatus["statecode"] = new OptionSetValue(1);
+						if (markAsCompleted)
+						{
+							Entity updateStatus = new Entity(activityLogicalName, activityId);
+							updateStatus["statecode"] = new OptionSetValue(1); //Completed
 
-						if (activityLogicalName == "phonecall" || activityLogicalName == "email") updateStatus["statuscode"] = new OptionSetValue(2);
-						else if (activityLogicalName == "task") updateStatus["statuscode"] = new OptionSetValue(5);
-						else if (activityLogicalName == "appointment") updateStatus["statuscode"] = new OptionSetValue(3);
+							if (activityLogicalName == "phonecall" || activityLogicalName == "email")
+								updateStatus["statuscode"] = new OptionSetValue(2);
+							else if (activityLogicalName == "task")
+								updateStatus["statuscode"] = new OptionSetValue(5);
+							else if (activityLogicalName == "appointment")
+								updateStatus["statuscode"] = new OptionSetValue(3);
+							else if (activityLogicalName == "new_engagement")
+								updateStatus["statuscode"] = new OptionSetValue(2); //Completed
 
-						service.Update(updateStatus);
-
+							service.Update(updateStatus);
+						}
 						tracingService.Trace("Cleaning up Opportunity logger fields.");
 						Entity oppCleanup = new Entity("opportunity", targetOpp.Id);
 						oppCleanup["new_activitytype"] = null;
