@@ -37,37 +37,52 @@ namespace Pl.Opportunity.QuickActivityLogger
 					DateTime? dueDate = targetOpp.GetAttributeValue<DateTime?>("new_activityduedate") ?? DateTime.UtcNow;
 
 					string activityLogicalName = "";
+					string subjectLabel = "";
 					int? subStatusValue = null;
 					int? engagementTypeValue = null;
 					bool markAsCompleted = true; // All completed for default
 					switch (activityType.Value)
 					{
-						case 100000000: activityLogicalName = "phonecall"; break;
-						case 100000001: activityLogicalName = "task"; break;
-						case 100000003: activityLogicalName = "email"; break;
+						case 100000000:
+							activityLogicalName = "phonecall";
+							subjectLabel = "Phone Call";
+							break;
+						case 100000001:
+							activityLogicalName = "task";
+							subjectLabel = "Task";
+							break;
+						case 100000003:
+							activityLogicalName = "email";
+							subjectLabel = "Email";
+							break;
 
 						// APPOINTMENTS
 						case 100000002: // Attended Meeting
 							activityLogicalName = "appointment";
-							subStatusValue = 100000001; // Attended
+							subjectLabel = "Meeting Attended";
+							subStatusValue = 100000001;
 							break;
-						case 100000004: //"Set Meeting"
+						case 100000004: // Set Meeting
 							activityLogicalName = "appointment";
-							subStatusValue = 100000000; // Set
-							markAsCompleted = false;
+							subjectLabel = "Meeting Set";
+							subStatusValue = 100000000;
+							markAsCompleted = false; // "Set" meetings remain scheduled
 							break;
 
 						// ENGAGEMENTS
 						case 100000005: // Text Message
 							activityLogicalName = "new_engagement";
+							subjectLabel = "Text Message";
 							engagementTypeValue = 100000000;
 							break;
 						case 100000006: // Event Engagement
 							activityLogicalName = "new_engagement";
+							subjectLabel = "Event Engagement";
 							engagementTypeValue = 100000001;
 							break;
 						case 100000007: // Game Engagement
 							activityLogicalName = "new_engagement";
+							subjectLabel = "Game Engagement";
 							engagementTypeValue = 100000002;
 							break;
 
@@ -84,7 +99,10 @@ namespace Pl.Opportunity.QuickActivityLogger
 						if (engagementTypeValue != null)
 							activity["new_engagementtype"] = new OptionSetValue(engagementTypeValue.Value);
 
-						activity["subject"] = $"Quick Log: {activityLogicalName} - {fullOpp.GetAttributeValue<string>("name")}";
+						// Subject includes "Quick Log" prefix for traceability
+						string oppName = fullOpp.GetAttributeValue<string>("name") ?? "N/A";
+						activity["subject"] = $"Quick Log: {subjectLabel} - {oppName}"; 
+						
 						activity["description"] = details;
 						activity["regardingobjectid"] = targetOpp.ToEntityReference();
 						activity["scheduledend"] = dueDate;
