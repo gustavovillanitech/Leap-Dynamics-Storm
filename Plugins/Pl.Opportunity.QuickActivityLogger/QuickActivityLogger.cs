@@ -69,12 +69,13 @@ namespace Pl.Opportunity.QuickActivityLogger
 							markAsCompleted = false; // "Set" meetings remain scheduled
 							break;
 
-						// ENGAGEMENTS
+						// NEW STANDALONE TEXT MESSAGE ENTITY
 						case 100000005: // Text Message
-							activityLogicalName = "new_engagement";
+							activityLogicalName = "new_textmessage";
 							subjectLabel = "Text Message";
-							engagementTypeValue = 100000000;
 							break;
+
+						// ENGAGEMENTS
 						case 100000006: // Event Engagement
 							activityLogicalName = "new_engagement";
 							subjectLabel = "Event Engagement";
@@ -130,7 +131,7 @@ namespace Pl.Opportunity.QuickActivityLogger
 								updateStatus["statuscode"] = new OptionSetValue(5);
 							else if (activityLogicalName == "appointment")
 								updateStatus["statuscode"] = new OptionSetValue(3);
-							else if (activityLogicalName == "new_engagement")
+							else if (activityLogicalName == "new_engagement" || activityLogicalName == "new_textmessage")
 								updateStatus["statuscode"] = new OptionSetValue(2); //Completed
 
 							service.Update(updateStatus);
