@@ -33,30 +33,30 @@ namespace Pl.Inventory.TotalCalculatedField
 
 					// 1. Retrieve the Rate value (Money type)
 					// Check Target first, then PreImage if Target doesn't contain the field (common in Updates)
-					if (inventory.Contains("new_Rate") && inventory["new_Rate"] != null)
+					if (inventory.Contains("new_rate") && inventory["new_rate"] != null)
 					{
-						rate = ((Money)inventory["new_Rate"]).Value;
+						rate = ((Money)inventory["new_rate"]).Value;
 					}
-					else if (context.PreEntityImages.Contains("PreImage") && context.PreEntityImages["PreImage"].Contains("new_Rate"))
+					else if (context.PreEntityImages.Contains("PreImage") && context.PreEntityImages["PreImage"].Contains("new_rate"))
 					{
-						rate = ((Money)context.PreEntityImages["PreImage"]["new_Rate"]).Value;
+						rate = ((Money)context.PreEntityImages["PreImage"]["new_rate"]).Value;
 					}
 
 					// 2. Retrieve the Quantity value (Decimal type)
-					if (inventory.Contains("new_Quantity") && inventory["new_Quantity"] != null)
+					if (inventory.Contains("new_quantity") && inventory["new_quantity"] != null)
 					{
-						quantity = (decimal)inventory["new_Quantity"];
+						quantity = (decimal)inventory["new_quantity"];
 					}
-					else if (context.PreEntityImages.Contains("PreImage") && context.PreEntityImages["PreImage"].Contains("new_Quantity"))
+					else if (context.PreEntityImages.Contains("PreImage") && context.PreEntityImages["PreImage"].Contains("new_quantity"))
 					{
-						quantity = (decimal)context.PreEntityImages["PreImage"]["new_Quantity"];
+						quantity = (decimal)context.PreEntityImages["PreImage"]["new_quantity"];
 					}
 
 					tracingService.Trace("Input values retrieved - Rate: {0}, Quantity: {1}", rate, quantity);
 
 					// 3. Perform calculation and set the Total field (Money type)
 					decimal totalCalculation = rate * quantity;
-					inventory["new_Total"] = new Money(totalCalculation);
+					inventory["new_total"] = new Money(totalCalculation);
 
 					tracingService.Trace("Total calculation successful: {0}", totalCalculation);
 				}
