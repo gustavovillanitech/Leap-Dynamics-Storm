@@ -1,12 +1,30 @@
 var OpportunityForm = OpportunityForm || {};
+var OpportunityFormCP = OpportunityFormCP || {};
 
-// Caches for the field options
+// --- Cache initialization ---
+// Ticketing / Original Namespace
 OpportunityForm.allTicketOptions = [];
 OpportunityForm.allProductTypeOptions = [];
 OpportunityForm.allProductDetailOptions = [];
 OpportunityForm.allSalesSourceOptions = [];
 OpportunityForm.allLostReasonOptions = [];
 
+// Corporate Partnerships (CP) Namespace
+OpportunityFormCP.allOppTypeOptions = [];
+OpportunityFormCP.allSalesStageOptions = [];
+OpportunityFormCP.allLostReasonOptions = [];
+
+// --- IDs Lost Reason (Corporate Partnership specific values) ---
+var cpLostReasonIds = [
+    100000016, // Budget
+    100000017, // Timing
+    100000018, // Invested with another team
+    100000019, // ghosted/lost comms
+    100000020, // Assets not available
+    100000021  // Shifted marketing priorities
+];
+
+// --- OpportunityForm (Ticketing Logic) ---
 OpportunityForm.onLoad = function(executionContext) {
     var formContext = executionContext.getFormContext();
 
@@ -35,20 +53,57 @@ OpportunityForm.onLoad = function(executionContext) {
     OpportunityForm.allLostReasonOptions = cacheOptions("new_lostreason");
 
     // 2. Validate cache and run filters
-    if (OpportunityForm.allProductTypeOptions.length === 0) {
+    if (OpportunityForm.allProductTypeOptions.length === 0 || OpportunityForm.allLostReasonOptions.length === 0) {
+            setTimeout(function() {
+                OpportunityForm.onLoad(executionContext);
+            }, 300);
+        } else {
+            OpportunityForm.applyFilters(formContext);
+        }
+};
+
+// --- OpportunityFormCP (Corporate Partnerships Logic) ---
+OpportunityFormCP.onLoad = function(executionContext) {
+    var formContext = executionContext.getFormContext();
+
+    var cacheOptionsCP = function(attributeName) {
+        var attr = formContext.getAttribute(attributeName);
+        if (attr) {
+            var options = attr.getOptions();
+            return (options && options.length > 0) ? options.map(function(opt) {
+                return { value: Number(opt.value), text: opt.text };
+            }) : [];
+        }
+        return [];
+    };
+
+    // Cache lists specific to Corporate Partnerships
+    OpportunityFormCP.allOppTypeOptions = cacheOptionsCP("new_opportunitytype");
+    OpportunityFormCP.allSalesStageOptions = cacheOptionsCP("new_salesstage");
+    OpportunityFormCP.allLostReasonOptions = cacheOptionsCP("new_lostreason");
+
+    // Validate cache and run CP filters
+if (OpportunityFormCP.allOppTypeOptions.length === 0 || OpportunityFormCP.allLostReasonOptions.length === 0) {
         setTimeout(function() {
-            OpportunityForm.onLoad(executionContext);
+            OpportunityFormCP.onLoad(executionContext);
         }, 300);
     } else {
-        OpportunityForm.applyFilters(formContext);
+        OpportunityFormCP.applyFiltersCP(formContext);
     }
 };
 
+// --- Event Handlers ---
 OpportunityForm.onControllingFieldChange = function(executionContext) {
     var formContext = executionContext.getFormContext();
     OpportunityForm.applyFilters(formContext);
 };
 
+OpportunityFormCP.onControllingFieldChange = function(executionContext) {
+    var formContext = executionContext.getFormContext();
+    OpportunityFormCP.applyFiltersCP(formContext);
+};
+
+// --- Orchestrators ---
 OpportunityForm.applyFilters = function(formContext) {
     OpportunityForm.filterProductType(formContext);
     OpportunityForm.filterSalesSource(formContext);
@@ -57,13 +112,24 @@ OpportunityForm.applyFilters = function(formContext) {
     OpportunityForm.filterProductDetail(formContext);
 };
 
+OpportunityFormCP.applyFiltersCP = function(formContext) {
+    OpportunityFormCP.filterOpportunityTypeByAppCP(formContext);
+    OpportunityFormCP.filterSalesStageCP(formContext);
+    OpportunityFormCP.filterLostReasonCP(formContext);
+};
+
+// --- Filtering Methods ---
 OpportunityForm.filterLostReason = function(formContext) {
     var ctrl = formContext.getControl("new_lostreason");
     if (!ctrl || OpportunityForm.allLostReasonOptions.length === 0) return;
-    var toHide = [100000015, 100000013, 100000012, 100000006, 100000011, 100000014];
+    var originalToHide = [100000015, 100000013, 100000012, 100000006, 100000011, 100000014];
+
+    // Combine original exclusions with the CP global list
+    var combinedToHide = originalToHide.concat(cpLostReasonIds);
+
     ctrl.clearOptions();
     OpportunityForm.allLostReasonOptions.forEach(function(o) {
-        if (toHide.indexOf(o.value) === -1) ctrl.addOption(o);
+        if (combinedToHide.indexOf(o.value) === -1) ctrl.addOption(o);
     });
 };
 
@@ -198,4 +264,96 @@ OpportunityForm.refreshTimeline = function(formContext) {
             timelineControl.refresh();
         }
     }, 2500);
+};
+
+// Filter Sales Stage based on Opportunity Type
+OpportunityFormCP.filterSalesStageCP = function(formContext) {
+    var attr = formContext.getAttribute("new_opportunitytype");
+    var ctrl = formContext.getControl("new_salesstage");
+    
+    if (!attr || !ctrl || OpportunityFormCP.allSalesStageOptions.length === 0) return;
+    
+    var type = attr.getValue();
+    
+    // Mapping of Opportunity Type to allowed Sales Stage values
+    var map = {
+        // Corporate Partnership - Prospect
+        100000003: [
+            100000000, // 01 - Prospect
+            100000010, // 02 - Discovery Meeting
+            100000011, // 03 - Define Objectives
+            100000012, // 04 - Idea Generation – Internal
+            100000013, // 05 - Idea Generation – External
+            100000001, // 06 - Pitched
+            100000015, // 07 - Follow up / Negotiation
+            100000016, // 08 - Verbal / At Contract
+            100000003, // 09 - Closed
+            100000004  // 10 - Declined
+        ],
+        // Corporate Partnership - Current
+        100000006: [
+            100000019, // 01 - Tip-off Meeting
+            100000008, // 02 - Activation
+            100000021, // 03 - Mid-season Recap
+            100000022, // 04 - Playoff Option / Letter
+            100000006, // 05 - Recap
+            100000024, // 06 - Agreement Option
+            100000007, // 07 - Renewal
+            100000025, // 08 - Upsell
+            100000026, // 09 - Verbal / At Contract
+            100000017, // 10 - Closed
+            100000018  // 11 - Declined
+        ]
+    };
+    
+    ctrl.clearOptions();
+    var allowed = map[type];
+    
+    OpportunityFormCP.allSalesStageOptions.forEach(function(o) {
+        // If no type is selected, we could show all, or if it matches the map
+        if (type === null || (allowed && allowed.indexOf(o.value) > -1)) {
+            ctrl.addOption(o);
+        }
+    });
+};
+
+// Filter Opportunity Type based on the Model-Driven App
+OpportunityFormCP.filterOpportunityTypeByAppCP = function(formContext) {
+    var ctrl = formContext.getControl("new_opportunitytype");
+    if (!ctrl || OpportunityFormCP.allOppTypeOptions.length === 0) return;
+
+    // Get the Global Context to check the App Unique Name
+    var globalContext = Xrm.Utility.getGlobalContext();
+    
+    globalContext.getCurrentAppProperties().then(function (appProperties) {
+        // Check if the current app is "new_CorporatePartnerships"
+        if (appProperties.uniqueName === "new_CorporatePartnerships") {
+            var allowedTypes = [100000003, 100000006]; // Prospect and Current
+            
+            ctrl.clearOptions();
+            
+            OpportunityFormCP.allOppTypeOptions.forEach(function (o) {
+                if (allowedTypes.indexOf(o.value) > -1) {
+                    ctrl.addOption(o);
+                }
+            });
+        }
+    }, function (error) {
+        console.error("Error retrieving app properties: " + error.message);
+    });
+};
+
+
+//Method for Corporate Partnerships logic, shows ONLY the CP-specific Lost Reasons.
+OpportunityFormCP.filterLostReasonCP = function(formContext) {
+    var ctrl = formContext.getControl("new_lostreason");
+    if (!ctrl || OpportunityFormCP.allLostReasonOptions.length === 0) return;
+
+    ctrl.clearOptions();
+    OpportunityFormCP.allLostReasonOptions.forEach(function(o) {
+        // Show ONLY what is in the CP global list
+        if (cpLostReasonIds.indexOf(o.value) > -1) {
+            ctrl.addOption(o);
+        }
+    });
 };
