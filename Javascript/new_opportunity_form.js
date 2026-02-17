@@ -371,6 +371,9 @@ OpportunityFormCP.filterLostReasonCP = function(formContext) {
 
 // Method to handle placeholder, managing null Account values
 OpportunityFormCP.setTopicPlaceholder = function(formContext) {
+    // 1 = Create (New Record), we only act on new ones!
+    if (formContext.ui.getFormType() !== 1) return;
+
     var topicAttr = formContext.getAttribute("name");
     var accountAttr = formContext.getAttribute("parentaccountid");
     
@@ -395,4 +398,20 @@ OpportunityFormCP.setTopicPlaceholder = function(formContext) {
             topicAttr.setValue("Draft: Corporate Partnership");
         }
     }
+};
+
+OpportunityFormCP.onSave = function(executionContext) {
+    var formContext = executionContext.getFormContext();
+    
+    // Refresh Timeline
+    OpportunityForm.refreshTimeline(formContext);
+
+    // Refresh the record to fetch the Flow's generated name
+    // We wait 3 seconds to let the Flow finish
+    setTimeout(function () {
+        formContext.data.refresh(false).then(
+            function() { console.log("Form refreshed with Flow data."); },
+            function(error) { console.error("Error refreshing: " + error.message); }
+        );
+    }, 2000); 
 };
