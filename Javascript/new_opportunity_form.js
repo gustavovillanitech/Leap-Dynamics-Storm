@@ -28,11 +28,8 @@ var cpLostReasonIds = [
 OpportunityForm.onLoad = function(executionContext) {
     var formContext = executionContext.getFormContext();
 
-    // SAFETY FIX: Ensure the ticketing stage is unlocked on load 
     var ticketingCtrl = formContext.getControl("new_ticketingstage");
-    if (ticketingCtrl) {
-        ticketingCtrl.setDisabled(false);
-    }
+    if (ticketingCtrl) { ticketingCtrl.setDisabled(false); }
 
     var cacheOptions = function(attributeName) {
         var attr = formContext.getAttribute(attributeName);
@@ -42,29 +39,31 @@ OpportunityForm.onLoad = function(executionContext) {
                 return { value: Number(opt.value), text: opt.text };
             }) : [];
         }
-        return [];
+        return []; // Always return an empty array to avoid .length errors
     };
 
-    // 1. Cache the master lists of options
     OpportunityForm.allTicketOptions = cacheOptions("new_ticketingstage");
     OpportunityForm.allProductTypeOptions = cacheOptions("new_producttype");
     OpportunityForm.allProductDetailOptions = cacheOptions("new_producttypedetail");
     OpportunityForm.allSalesSourceOptions = cacheOptions("new_salessource");
     OpportunityForm.allLostReasonOptions = cacheOptions("new_lostreason");
 
-    // 2. Validate cache and run filters
-    if (OpportunityForm.allProductTypeOptions.length === 0 || OpportunityForm.allLostReasonOptions.length === 0) {
-            setTimeout(function() {
-                OpportunityForm.onLoad(executionContext);
-            }, 300);
-        } else {
-            OpportunityForm.applyFilters(formContext);
-        }
+    // SAFETY CHECK: Only wait for critical fields if they actually exist on the current form
+    var needsWait = false;
+    if (formContext.getAttribute("new_producttype") && OpportunityForm.allProductTypeOptions.length === 0) needsWait = true;
+    if (formContext.getAttribute("new_lostreason") && OpportunityForm.allLostReasonOptions.length === 0) needsWait = true;
+    
+    if (needsWait) {
+        setTimeout(function() { OpportunityForm.onLoad(executionContext); }, 300);
+    } else {
+        OpportunityForm.applyFilters(formContext);
+    }
 };
 
 // --- OpportunityFormCP (Corporate Partnerships Logic) ---
 OpportunityFormCP.onLoad = function(executionContext) {
     var formContext = executionContext.getFormContext();
+    console.log("CP Logic Started");
 
     var cacheOptionsCP = function(attributeName) {
         var attr = formContext.getAttribute(attributeName);
@@ -74,20 +73,22 @@ OpportunityFormCP.onLoad = function(executionContext) {
                 return { value: Number(opt.value), text: opt.text };
             }) : [];
         }
-        return [];
+        return []; // Always return an empty array
     };
 
-    // Cache lists specific to Corporate Partnerships
+    OpportunityFormCP.setTopicPlaceholder(formContext);
+
     OpportunityFormCP.allOppTypeOptions = cacheOptionsCP("new_opportunitytype");
     OpportunityFormCP.allSalesStageOptions = cacheOptionsCP("new_salesstage");
     OpportunityFormCP.allLostReasonOptions = cacheOptionsCP("new_lostreason");
 
-    // Validate cache and run CP filters
-if (OpportunityFormCP.allOppTypeOptions.length === 0 || OpportunityFormCP.allLostReasonOptions.length === 0) {
-        setTimeout(function() {
-            OpportunityFormCP.onLoad(executionContext);
-        }, 300);
+    var needsWaitCP = false;
+    if (formContext.getAttribute("new_opportunitytype") && OpportunityFormCP.allOppTypeOptions.length === 0) needsWaitCP = true;
+
+    if (needsWaitCP) {
+        setTimeout(function() { OpportunityFormCP.onLoad(executionContext); }, 300);
     } else {
+        console.log("Applying CP Filters...");
         OpportunityFormCP.applyFiltersCP(formContext);
     }
 };
@@ -307,14 +308,20 @@ OpportunityFormCP.filterSalesStageCP = function(formContext) {
     };
     
     ctrl.clearOptions();
-    var allowed = map[type];
-    
-    OpportunityFormCP.allSalesStageOptions.forEach(function(o) {
-        // If no type is selected, we could show all, or if it matches the map
-        if (type === null || (allowed && allowed.indexOf(o.value) > -1)) {
-            ctrl.addOption(o);
-        }
-    });
+    //If no type is selected, keep it disabled and empty
+    if (type === null) {
+        ctrl.setDisabled(true);
+        formContext.getAttribute("new_salesstage").setValue(null);
+    } else {
+        // Enable and show allowed options
+        ctrl.setDisabled(false);
+        var allowed = map[type];
+        OpportunityFormCP.allSalesStageOptions.forEach(function(o) {
+            if (allowed && allowed.indexOf(o.value) > -1) {
+                ctrl.addOption(o);
+            }
+        });
+    }
 };
 
 // Filter Opportunity Type based on the Model-Driven App
@@ -326,6 +333,10 @@ OpportunityFormCP.filterOpportunityTypeByAppCP = function(formContext) {
     var globalContext = Xrm.Utility.getGlobalContext();
     
     globalContext.getCurrentAppProperties().then(function (appProperties) {
+
+    // --- DEBUG: Revisa este valor en la consola del navegador (F12) ---
+        console.log("Current App Unique Name: " + appProperties.uniqueName);
+
         // Check if the current app is "new_CorporatePartnerships"
         if (appProperties.uniqueName === "new_CorporatePartnerships") {
             var allowedTypes = [100000003, 100000006]; // Prospect and Current
@@ -356,4 +367,32 @@ OpportunityFormCP.filterLostReasonCP = function(formContext) {
             ctrl.addOption(o);
         }
     });
+};
+
+// Method to handle placeholder, managing null Account values
+OpportunityFormCP.setTopicPlaceholder = function(formContext) {
+    var topicAttr = formContext.getAttribute("name");
+    var accountAttr = formContext.getAttribute("parentaccountid");
+    
+    // Safety check: Does the attribute exist in this form?
+    if (!topicAttr || !accountAttr) return;
+
+    var accountValue = accountAttr.getValue();
+
+    // Case 1: Account is selected
+    if (accountValue && accountValue.length > 0) {
+        var accountName = accountValue[0].name;
+        
+        // Only overwrite if it's empty or has the generic "New Opportunity" text
+        if (!topicAttr.getValue() || topicAttr.getValue() === "New Opportunity") {
+            topicAttr.setValue(accountName); 
+        }
+    } 
+    // Case 2: Account is NULL
+    else {
+        // Optional: Set a generic text so the "Required" validation is met
+        if (!topicAttr.getValue()) {
+            topicAttr.setValue("Draft: Corporate Partnership");
+        }
+    }
 };
