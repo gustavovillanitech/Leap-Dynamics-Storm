@@ -90,6 +90,7 @@ OpportunityFormCP.onLoad = function(executionContext) {
     } else {
         console.log("Applying CP Filters...");
         OpportunityFormCP.applyFiltersCP(formContext);
+        OpportunityFormCP.toggleLostReasonVisibilityCP(executionContext);
     }
 };
 
@@ -102,6 +103,10 @@ OpportunityForm.onControllingFieldChange = function(executionContext) {
 OpportunityFormCP.onControllingFieldChange = function(executionContext) {
     var formContext = executionContext.getFormContext();
     OpportunityFormCP.applyFiltersCP(formContext);
+};
+
+OpportunityFormCP.onSalesStageChange = function(executionContext) {
+    OpportunityFormCP.toggleLostReasonVisibilityCP(executionContext);
 };
 
 // --- Orchestrators ---
@@ -414,4 +419,38 @@ OpportunityFormCP.onSave = function(executionContext) {
             function(error) { console.error("Error refreshing: " + error.message); }
         );
     }, 2000); 
+};
+
+
+// Manages the visibility of the Lost Reason field based on the Sales Stage
+// specific to the Corporate Partnerships app.
+OpportunityFormCP.toggleLostReasonVisibilityCP = function (executionContext) {
+    var formContext = executionContext.getFormContext();
+    var globalContext = Xrm.Utility.getGlobalContext();
+
+    globalContext.getCurrentAppProperties().then(function (appProperties) {
+        // Check if we are inside the Corporate Partnerships App
+        if (appProperties.uniqueName === "new_CorporatePartnerships") {
+            var salesStageAttr = formContext.getAttribute("new_salesstage");
+            var lostReasonCtrl = formContext.getControl("new_lostreason");
+
+            if (salesStageAttr && lostReasonCtrl) {
+                var stageValue = salesStageAttr.getValue();
+                
+                // 100000004 = 10 - Declined (Prospect)
+                // 100000018 = 11 - Declined (Current)
+                var isDeclined = (stageValue === 100000004 || stageValue === 100000018);
+                
+                // Toggle visibility based on the result
+                lostReasonCtrl.setVisible(isDeclined);
+                
+                // Optional: Clear value if hidden to maintain data integrity
+                if (!isDeclined) {
+                    formContext.getAttribute("new_lostreason").setValue(null);
+                }
+            }
+        }
+    }, function (error) {
+        console.error("Error identifying app for visibility logic: " + error.message);
+    });
 };
