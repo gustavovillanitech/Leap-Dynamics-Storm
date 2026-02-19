@@ -422,8 +422,8 @@ OpportunityFormCP.onSave = function(executionContext) {
 };
 
 
-// Manages the visibility of the Lost Reason field based on the Sales Stage
-// specific to the Corporate Partnerships app.
+// Manages the visibility and requirement level of the Lost Reason field 
+// based on the Sales Stage specific to the Corporate Partnerships app.
 OpportunityFormCP.toggleLostReasonVisibilityCP = function (executionContext) {
     var formContext = executionContext.getFormContext();
     var globalContext = Xrm.Utility.getGlobalContext();
@@ -432,9 +432,10 @@ OpportunityFormCP.toggleLostReasonVisibilityCP = function (executionContext) {
         // Check if we are inside the Corporate Partnerships App
         if (appProperties.uniqueName === "new_CorporatePartnerships") {
             var salesStageAttr = formContext.getAttribute("new_salesstage");
+            var lostReasonAttr = formContext.getAttribute("new_lostreason");
             var lostReasonCtrl = formContext.getControl("new_lostreason");
 
-            if (salesStageAttr && lostReasonCtrl) {
+            if (salesStageAttr && lostReasonAttr && lostReasonCtrl) {
                 var stageValue = salesStageAttr.getValue();
                 
                 // 100000004 = 10 - Declined (Prospect)
@@ -443,14 +444,17 @@ OpportunityFormCP.toggleLostReasonVisibilityCP = function (executionContext) {
                 
                 // Toggle visibility based on the result
                 lostReasonCtrl.setVisible(isDeclined);
+
+                // Set requirement level: "required" if visible, "none" if hidden
+                lostReasonAttr.setRequiredLevel(isDeclined ? "required" : "none");
                 
                 // Optional: Clear value if hidden to maintain data integrity
                 if (!isDeclined) {
-                    formContext.getAttribute("new_lostreason").setValue(null);
+                    lostReasonAttr.setValue(null);
                 }
             }
         }
     }, function (error) {
-        console.error("Error identifying app for visibility logic: " + error.message);
+        console.error("Error identifying app for visibility/requirement logic: " + error.message);
     });
 };
