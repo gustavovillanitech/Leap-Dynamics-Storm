@@ -30,8 +30,6 @@ DealForm.onOpportunityChange = function (executionContext) {
 
     /**
      * We retrieve the 'parentaccountid' from the Opportunity.
-     * Note: In standard Dynamics, the field is 'parentaccountid'. 
-     * If your Opportunity uses a custom field like 'new_accountid', change the string below.
      */
     Xrm.WebApi.retrieveRecord("opportunity", oppId, "?$select=_parentaccountid_value").then(
         function success(result) {
