@@ -1,7 +1,9 @@
 <Solution>
   <Folder Name="/Javascript/">
+    <File Path="Javascript/Deal.js" />
+    <File Path="Javascript/Deallines.js" />
+    <File Path="Javascript/new_OpportunityQuickCreateLogic.js" />
     <File Path="Javascript/new_opportunity_form.js" />
-    <File Path="new_OpportunityQuickCreateLogic.js" />
   </Folder>
   <Folder Name="/Plugins/">
     <Project Path="Plugins/Pl.ActivityPointer.SyncTicketingStageFromOpportunity/Pl.ActivityPointer.SyncTicketingStageFromOpportunity.csproj" Id="ee2a3933-8ed6-4da3-8c23-f656ba98a075" />
