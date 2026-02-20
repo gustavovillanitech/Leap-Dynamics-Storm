@@ -8,6 +8,7 @@ OpportunityForm.allProductTypeOptions = [];
 OpportunityForm.allProductDetailOptions = [];
 OpportunityForm.allSalesSourceOptions = [];
 OpportunityForm.allLostReasonOptions = [];
+OpportunityForm.allOppTypeOptions = [];
 
 // Corporate Partnerships (CP) Namespace
 OpportunityFormCP.allOppTypeOptions = [];
@@ -42,6 +43,7 @@ OpportunityForm.onLoad = function(executionContext) {
         return []; // Always return an empty array to avoid .length errors
     };
 
+    OpportunityForm.allOppTypeOptions = cacheOptions("new_opportunitytype");
     OpportunityForm.allTicketOptions = cacheOptions("new_ticketingstage");
     OpportunityForm.allProductTypeOptions = cacheOptions("new_producttype");
     OpportunityForm.allProductDetailOptions = cacheOptions("new_producttypedetail");
@@ -112,6 +114,7 @@ OpportunityFormCP.onSalesStageChange = function(executionContext) {
 
 // --- Orchestrators ---
 OpportunityForm.applyFilters = function(formContext) {
+    OpportunityForm.filterOpportunityTypeByApp(formContext);
     OpportunityForm.filterProductType(formContext);
     OpportunityForm.filterSalesSource(formContext);
     OpportunityForm.filterLostReason(formContext);
@@ -341,7 +344,6 @@ OpportunityFormCP.filterOpportunityTypeByAppCP = function(formContext) {
     
     globalContext.getCurrentAppProperties().then(function (appProperties) {
 
-    // --- DEBUG: Revisa este valor en la consola del navegador (F12) ---
         console.log("Current App Unique Name: " + appProperties.uniqueName);
 
         // Check if the current app is "new_CorporatePartnerships"
@@ -351,6 +353,35 @@ OpportunityFormCP.filterOpportunityTypeByAppCP = function(formContext) {
             ctrl.clearOptions();
             
             OpportunityFormCP.allOppTypeOptions.forEach(function (o) {
+                if (allowedTypes.indexOf(o.value) > -1) {
+                    ctrl.addOption(o);
+                }
+            });
+        }
+    }, function (error) {
+        console.error("Error retrieving app properties: " + error.message);
+    });
+};
+
+// Filter Opportunity Type based on the Model-Driven App
+OpportunityForm.filterOpportunityTypeByApp = function(formContext) {
+    var ctrl = formContext.getControl("new_opportunitytype");
+    if (!ctrl || OpportunityForm.allOppTypeOptions.length === 0) return;
+
+    // Get the Global Context to check the App Unique Name
+    var globalContext = Xrm.Utility.getGlobalContext();
+    
+    globalContext.getCurrentAppProperties().then(function (appProperties) {
+
+        console.log("Current App Unique Name: " + appProperties.uniqueName);
+
+        // Check if the current app is not "new_CorporatePartnerships"
+        if (appProperties.uniqueName !== "new_CorporatePartnerships") {
+            var allowedTypes = [100000000, 100000001,100000004,100000002,100000005]; // Ticketing - New FSE, Ticketing - Groups, Ticketing - Premium Sales, Ticketing - Service, Ticketing - Premium Service
+            
+            ctrl.clearOptions();
+            
+            OpportunityForm.allOppTypeOptions.forEach(function (o) {
                 if (allowedTypes.indexOf(o.value) > -1) {
                     ctrl.addOption(o);
                 }
