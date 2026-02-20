@@ -91,6 +91,7 @@ OpportunityFormCP.onLoad = function(executionContext) {
         console.log("Applying CP Filters...");
         OpportunityFormCP.applyFiltersCP(formContext);
         OpportunityFormCP.toggleLostReasonVisibilityCP(executionContext);
+        OpportunityFormCP.setRequiredFieldsCP(executionContext);
     }
 };
 
@@ -290,11 +291,12 @@ OpportunityFormCP.filterSalesStageCP = function(formContext) {
             100000011, // 03 - Define Objectives
             100000012, // 04 - Idea Generation – Internal
             100000013, // 05 - Idea Generation – External
-            100000001, // 06 - Pitched
-            100000015, // 07 - Follow up / Negotiation
-            100000016, // 08 - Verbal / At Contract
-            100000003, // 09 - Closed
-            100000004  // 10 - Declined
+            100000027, // 06 - Ready for Proposal
+            100000001, // 07 - Pitched
+            100000015, // 08 - Follow up / Negotiation
+            100000016, // 09 - Verbal / At Contract
+            100000003, // 10 - Closed
+            100000004  // 11 - Declined
         ],
         // Corporate Partnership - Current
         100000006: [
@@ -456,5 +458,36 @@ OpportunityFormCP.toggleLostReasonVisibilityCP = function (executionContext) {
         }
     }, function (error) {
         console.error("Error identifying app for visibility/requirement logic: " + error.message);
+    });
+};
+
+// Makes specific fields mandatory ONLY when inside the Corporate Partnerships App
+OpportunityFormCP.setRequiredFieldsCP = function (executionContext) {
+    var formContext = executionContext.getFormContext();
+    var globalContext = Xrm.Utility.getGlobalContext();
+
+    globalContext.getCurrentAppProperties().then(function (appProperties) {
+        // Check if we are inside the Corporate Partnerships App
+        if (appProperties.uniqueName === "new_CorporatePartnerships") {
+            
+            // Mandatory fields for CP Opportunities
+            var fieldsToRequire = [
+                "parentaccountid",       // Account
+                "new_leadsource",        // Lead Source
+                "new_basketballseason",  // Season
+                "new_opportunitytype",   // Opportunity Type
+                "new_salesstage"         // Sales Stage
+            ];
+
+            // iterate and set required level
+            fieldsToRequire.forEach(function(fieldName) {
+                var attr = formContext.getAttribute(fieldName);
+                if (attr) {
+                    attr.setRequiredLevel("required");
+                }
+            });
+        }
+    }, function (error) {
+        console.error("Error identifying app for required CP fields logic: " + error.message);
     });
 };
