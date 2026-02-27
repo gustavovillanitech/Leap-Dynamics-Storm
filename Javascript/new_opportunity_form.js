@@ -106,10 +106,14 @@ OpportunityForm.onControllingFieldChange = function(executionContext) {
 OpportunityFormCP.onControllingFieldChange = function(executionContext) {
     var formContext = executionContext.getFormContext();
     OpportunityFormCP.applyFiltersCP(formContext);
+    // NEW: Validate required fields on Opportunity Type change
+    OpportunityFormCP.setRequiredFieldsCP(executionContext);
 };
 
 OpportunityFormCP.onSalesStageChange = function(executionContext) {
     OpportunityFormCP.toggleLostReasonVisibilityCP(executionContext);
+    // NEW: Validate required fields on Sales Stage change
+    OpportunityFormCP.setRequiredFieldsCP(executionContext);
 };
 
 // --- Orchestrators ---
@@ -170,11 +174,12 @@ OpportunityForm.filterTicketingStage = function(formContext) {
     var type = attr.getValue();
     
     var map = {
-        100000000: [100000000, 100000001, 100000002, 100000003, 100000004, 100000005, 100000006],
-        100000001: [100000000, 100000001, 100000002, 100000007, 100000005, 100000006],
-        100000004: [100000000, 100000010, 100000011, 100000012, 100000013, 100000005, 100000006],
-        100000005: [100000000, 100000014, 100000015, 100000016, 100000017, 100000018, 100000019, 100000020, 100000021, 100000022, 100000006],
-        100000002: [100000000, 100000001, 100000002, 100000008, 100000009, 100000023, 100000024, 100000025, 100000026, 100000027, 100000028, 100000029, 100000030]
+        100000000: [100000000, 100000001, 100000002, 100000003, 100000004, 100000005, 100000006], //Ticketing - New FSE
+        100000001: [100000000, 100000001, 100000002, 100000007, 100000005, 100000006], //Ticketing - Groups
+        100000004: [100000000, 100000010, 100000011, 100000012, 100000013, 100000005, 100000006], //Ticketing - Premium Sales
+        100000005: [100000000, 100000014, 100000015, 100000016, 100000017, 100000018, 100000019, 100000020, 100000021, 100000022, 100000006], //Ticketing - Premium Service
+        //100000002: [100000000, 100000001, 100000002, 100000008, 100000009, 100000023, 100000024, 100000025, 100000026, 100000027, 100000028, 100000029, 100000030] //Ticketing - Service
+        100000002: [100000031, 100000032, 100000033, 100000034, 100000035, 100000036, 100000037, 100000038, 100000039, 100000040, 100000041, 100000042, 100000043] //Ticketing - Service
     };
     
     ctrl.clearOptions();
@@ -501,22 +506,88 @@ OpportunityFormCP.setRequiredFieldsCP = function (executionContext) {
         // Check if we are inside the Corporate Partnerships App
         if (appProperties.uniqueName === "new_CorporatePartnerships") {
             
-            // Mandatory fields for CP Opportunities
-            var fieldsToRequire = [
-                "parentaccountid",       // Account
-                "new_leadsource",        // Lead Source
-                "new_basketballseason",  // Season
-                "new_opportunitytype",   // Opportunity Type
-                "new_salesstage"         // Sales Stage
-            ];
-
-            // iterate and set required level
-            fieldsToRequire.forEach(function(fieldName) {
+            // Helper function to safely set requirement levels
+            var setReq = function(fieldName, level) {
                 var attr = formContext.getAttribute(fieldName);
                 if (attr) {
-                    attr.setRequiredLevel("required");
+                    attr.setRequiredLevel(level);
                 }
-            });
+            };
+
+            // 1. BASE FIELDS (Always required regardless of stage or type)
+            var baseFields = [
+                "new_opportunitytype", "parentaccountid", "new_salesstage", 
+                "new_leadsource", "new_basketballseason"
+            ];
+            baseFields.forEach(function(f) { setReq(f, "required"); });
+
+            // 2. CONDITIONAL FIELDS (Clear them first to prevent them from getting stuck if the user moves back a stage)
+            var conditionalFields = [
+                "parentcontactid", "campaignid", "budgetstatus", "new_pitchtype", "new_pitchdate",
+                "new_pitchedcontractlength", "new_confidencelevel", "estimatedclosedate", "estimatedvalue"
+            ];
+            conditionalFields.forEach(function(f) { setReq(f, "none"); });
+
+            // 3. GET CURRENT VALUES
+            var oppTypeAttr = formContext.getAttribute("new_opportunitytype");
+            var stageAttr = formContext.getAttribute("new_salesstage");
+            
+            var oppType = oppTypeAttr ? oppTypeAttr.getValue() : null;
+            var stage = stageAttr ? stageAttr.getValue() : null;
+
+            // 4. MATRIX LOGIC
+            
+            // --- MATRIX: 100000003 (Corporate Partnership - Prospect) ---
+            if (oppType === 100000003) {
+                // For Prospect, Contact is only required once a stage is selected (not 'When Creating')
+                if (stage !== null) {
+                    setReq("parentcontactid", "required");
+
+                    // Budget (Required in stages 06, 07, 08, 09)
+                    if ([100000027, 100000001, 100000015, 100000016].indexOf(stage) > -1) {
+                        setReq("budgetstatus", "required");
+                    }
+                    
+                    // Pitch Type (Required in stages 06, 07, 08, 09, 10)
+                    if ([100000027, 100000001, 100000015, 100000016, 100000003].indexOf(stage) > -1) {
+                        setReq("new_pitchtype", "required");
+                    }
+                    
+                    // Pitch Date, Contract Length, Confidence Level, Est. Revenue (Required in stages 07, 08, 09, 10)
+                    if ([100000001, 100000015, 100000016, 100000003].indexOf(stage) > -1) {
+                        setReq("new_pitchdate", "required");
+                        setReq("new_pitchedcontractlength", "required");
+                        setReq("new_confidencelevel", "required");
+                        setReq("estimatedvalue", "required");
+                    }
+
+                    // Est. Close Date (Required in stages 07, 08, 09, 10, 11)
+                    if ([100000001, 100000015, 100000016, 100000003, 100000004].indexOf(stage) > -1) {
+                        setReq("estimatedclosedate", "required");
+                    }
+                }
+            }
+            
+            // --- MATRIX: 100000006 (Corporate Partnership - Current) ---
+            else if (oppType === 100000006) {
+                // For Current, Contact and Source Campaign are ALWAYS required (even 'When Creating')
+                setReq("parentcontactid", "required");
+                setReq("campaignid", "required");
+
+                if (stage !== null) {
+                    // Stages 07, 08, 09, and 10 require all 7 fields in the matrix
+                    // 100000007 (07), 100000025 (08), 100000026 (09), 100000017 (10)
+                    if ([100000007, 100000025, 100000026, 100000017].indexOf(stage) > -1) {
+                        setReq("budgetstatus", "required");
+                        setReq("new_pitchtype", "required");
+                        setReq("new_pitchdate", "required");
+                        setReq("new_pitchedcontractlength", "required");
+                        setReq("new_confidencelevel", "required");
+                        setReq("estimatedclosedate", "required");
+                        setReq("estimatedvalue", "required");
+                    }
+                }
+            }
         }
     }, function (error) {
         console.error("Error identifying app for required CP fields logic: " + error.message);
