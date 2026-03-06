@@ -244,7 +244,7 @@ OpportunityForm.filterProductDetail = function(formContext) {
     var map = {
         100000008: [100000000, 100000001, 100000002], 
         100000001: [100000003, 100000004, 100000005], 
-        100000012: [100000006, 100000008, 100000009, 100000011, 100000012, 100000020, 100000021, 100000022, 100000023], //new_producttype = Premium Hospitality
+        100000012: [100000006, 100000008, 100000009, 100000011, 100000012, 100000020, 100000021, 100000022, 100000023, 100000024], //new_producttype = Premium Hospitality
         100000010: [100000013, 100000014, 100000015, 100000016, 100000017], 
         100000011: [100000018, 100000019] 
     };
@@ -571,7 +571,6 @@ OpportunityFormCP.setRequiredFieldsCP = function (executionContext) {
             else if (oppType === 100000006) {
                 // For Current, Contact and Source Campaign are ALWAYS required (even 'When Creating')
                 setReq("parentcontactid", "required");
-                setReq("campaignid", "required");
 
                 if (stage !== null) {
                     // Stages 07, 08, 09, and 10 require all 7 fields in the matrix

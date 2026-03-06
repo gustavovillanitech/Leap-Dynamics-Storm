@@ -176,17 +176,17 @@ OppQuickCreate.filterProductDetail = function(formContext) {
     var prodAttr = formContext.getAttribute("new_producttype");
     var detailAttr = formContext.getAttribute("new_producttypedetail");
     var ctrl = formContext.getControl("new_producttypedetail");
-    if (!prodAttr || !ctrl) return;
+    if (!prodAttr || !ctrl || OppQuickCreate.allProductDetailOptions.length === 0) return;
 
     var type = prodAttr.getValue();
     
     // Updated mapping including Partial and Flex Plans
     var map = {
-        100000008: [100000000, 100000001, 100000002], // Deposit
-        100000001: [100000003, 100000004, 100000005], // Groups
-        100000012: [100000006, 100000007, 100000008, 100000009, 100000010, 100000011, 100000012], // Hospitality
-        100000010: [100000013, 100000014, 100000015, 100000016, 100000017], // Partial Plans
-        100000011: [100000018, 100000019] // Flexible Plans
+        100000008: [100000000, 100000001, 100000002], 
+        100000001: [100000003, 100000004, 100000005], 
+        100000012: [100000006, 100000008, 100000009, 100000011, 100000012, 100000020, 100000021, 100000022, 100000023, 100000024], //new_producttype = Premium Hospitality
+        100000010: [100000013, 100000014, 100000015, 100000016, 100000017], 
+        100000011: [100000018, 100000019] 
     };
 
     ctrl.clearOptions();
