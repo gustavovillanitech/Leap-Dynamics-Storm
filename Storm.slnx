@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Consoles/">
+    <Project Path="Consoles/TrakImport/TrakImport.csproj" />
+  </Folder>
   <Folder Name="/Javascript/">
     <File Path="Javascript/Deal.js" />
     <File Path="Javascript/Deallines.js" />
