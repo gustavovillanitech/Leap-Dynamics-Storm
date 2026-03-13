@@ -106,14 +106,27 @@ OpportunityForm.onControllingFieldChange = function(executionContext) {
 OpportunityFormCP.onControllingFieldChange = function(executionContext) {
     var formContext = executionContext.getFormContext();
     OpportunityFormCP.applyFiltersCP(formContext);
-    // NEW: Validate required fields on Opportunity Type change
+    // Validate required fields on Opportunity Type change
     OpportunityFormCP.setRequiredFieldsCP(executionContext);
 };
 
 OpportunityFormCP.onSalesStageChange = function(executionContext) {
     OpportunityFormCP.toggleLostReasonVisibilityCP(executionContext);
-    // NEW: Validate required fields on Sales Stage change
+    // Validate required fields on Sales Stage change
     OpportunityFormCP.setRequiredFieldsCP(executionContext);
+};
+
+// --- Auto-generate CP Topic Name  ---
+OpportunityFormCP.onDependencyChangeForTopic = function(executionContext) {
+    var formContext = executionContext.getFormContext();
+    
+    // Is App de Corporate Partnerships?
+    var globalContext = Xrm.Utility.getGlobalContext();
+    globalContext.getCurrentAppProperties().then(function (appProperties) {
+        if (appProperties.uniqueName === "new_CorporatePartnerships") {
+            OpportunityFormCP.generateTopicName(formContext);
+        }
+    });
 };
 
 // --- Orchestrators ---
@@ -590,4 +603,35 @@ OpportunityFormCP.setRequiredFieldsCP = function (executionContext) {
     }, function (error) {
         console.error("Error identifying app for required CP fields logic: " + error.message);
     });
+};
+
+//Generates CP Topic Name in the format "[Account Name] - [Season]", only if the form is in the Corporate Partnerships app and when either the Account or Season fields change. It also handles null values gracefully.
+OpportunityFormCP.generateTopicName = function(formContext) {
+    var accountAttr = formContext.getAttribute("parentaccountid");
+    var seasonAttr = formContext.getAttribute("new_basketballseason");
+    var topicAttr = formContext.getAttribute("name");
+
+    // Validate that the required fields exist on the form
+    if (!accountAttr || !seasonAttr || !topicAttr) return;
+
+    var accountVal = accountAttr.getValue();
+    var seasonVal = seasonAttr.getValue();
+
+    var accountName = (accountVal && accountVal.length > 0) ? accountVal[0].name : "";
+    var seasonName = (seasonVal && seasonVal.length > 0) ? seasonVal[0].name : "";
+
+    // Build the name "[Account Name] - [Season]"
+    var newTopic = "";
+    if (accountName && seasonName) {
+        newTopic = accountName + " - " + seasonName;
+    } else if (accountName) {
+        newTopic = accountName;
+    } else if (seasonName) {
+        newTopic = seasonName;
+    }
+
+    // Update the Topic field in real-time (the user will see it change and can still edit it manually)
+    if (newTopic !== "") {
+        topicAttr.setValue(newTopic);
+    }
 };
