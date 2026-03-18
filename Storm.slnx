@@ -10,10 +10,11 @@
   </Folder>
   <Folder Name="/Plugins/">
     <Project Path="Plugins/Pl.ActivityPointer.SyncTicketingStageFromOpportunity/Pl.ActivityPointer.SyncTicketingStageFromOpportunity.csproj" Id="ee2a3933-8ed6-4da3-8c23-f656ba98a075" />
+    <Project Path="Plugins/Pl.Deal.SetName/Pl.Deal.SetName.csproj" Id="19a50403-e93a-4d5b-9008-accf876c5b15" />
+    <Project Path="Plugins/Pl.DealLines.InventoryManagement/Pl.DealLines.InventoryManagement.csproj" Id="391cea0f-cc65-46cf-a8a8-6e502c228db5" />
+    <Project Path="Plugins/Pl.Email.SuppressInternalEmployeeEmailTracking/Pl.Email.SuppressInternalEmployeeEmailTracking.csproj" />
     <Project Path="Plugins/Pl.Inventory.TotalCalculatedField/Pl.Inventory.TotalCalculatedField.csproj" Id="08d5c846-904f-4abe-aedb-be8c6a16997e" />
     <Project Path="Plugins/Pl.Opportunity.QuickActivityLogger/Pl.Opportunity.QuickActivityLogger.csproj" Id="e2e752e2-7231-4dcd-b863-73e08e632ef4" />
     <Project Path="Plugins/Pl.Opportunity.SetCPName/Pl.Opportunity.SetCPName.csproj" Id="443ac93e-9b1f-4c11-ad7c-5dd8d6fb59b5" />
   </Folder>
-  <Project Path="Plugins/Pl.Deal.SetName/Pl.Deal.SetName.csproj" Id="19a50403-e93a-4d5b-9008-accf876c5b15" />
-  <Project Path="Plugins/Pl.DealLines.InventoryManagement/Pl.DealLines.InventoryManagement.csproj" Id="391cea0f-cc65-46cf-a8a8-6e502c228db5" />
 </Solution>
