@@ -8,7 +8,7 @@ namespace Pl.Email.SuppressInternalEmployeeEmailTracking
 {
 	public class SuppressInternalEmployeeEmailTracking : IPlugin
 	{
-		private const string InternalEmployeeField = "new_IsInternalEmployee";
+		private const string InternalEmployeeField = "new_isinternalemployee";
 
 		public void Execute(IServiceProvider serviceProvider)
 		{
