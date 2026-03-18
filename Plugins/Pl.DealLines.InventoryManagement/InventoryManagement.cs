@@ -1,0 +1,320 @@
+﻿using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Query;
+using System;
+
+namespace Pl.DealLines.InventoryManagement
+{
+	public class UnifiedDealInventoryPlugin : IPlugin
+	{
+		public void Execute(IServiceProvider serviceProvider)
+		{
+			IPluginExecutionContext context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
+			IOrganizationServiceFactory serviceFactory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
+			IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
+			ITracingService tracingService = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
+
+			if (!context.InputParameters.Contains("Target") || !(context.InputParameters["Target"] is Entity))
+				return;
+
+			Entity target = (Entity)context.InputParameters["Target"];
+			string entityName = context.PrimaryEntityName;
+			string messageName = context.MessageName.ToLower();
+			int stage = context.Stage;
+
+			try
+			{
+				// ==============================================================================
+				// ENTITY 1: DEAL LINE (new_deallines)
+				// ==============================================================================
+				if (entityName == "new_deallines")
+				{
+					Entity preImage = context.PreEntityImages.Contains("PreImage") ? context.PreEntityImages["PreImage"] : new Entity(entityName);
+
+					// 1. PRE-OPERATION: Calculate Inline Math
+					if (stage == 20 && (messageName == "create" || messageName == "update"))
+					{
+						CalculateDealLineMetrics(target, preImage, tracingService);
+					}
+
+					// 2. POST-OPERATION: Rollup to Deal & Update Inventory Deltas
+					if (stage == 40 && (messageName == "create" || messageName == "update" || messageName == "delete"))
+					{
+						Guid dealId = GetLookupId(target, preImage, "new_dealid");
+
+						if (dealId != Guid.Empty)
+						{
+							RollupTotalsToParentDeal(dealId, service, tracingService);
+							UpdateInventoryDeltaFromLine(target, preImage, messageName, dealId, service, tracingService);
+						}
+					}
+				}
+				// ==============================================================================
+				// ENTITY 2: DEAL (new_deals)
+				// ==============================================================================
+				else if (entityName == "new_deals")
+				{
+					// 3. POST-OPERATION: Handle Status Changes (Moving Pitched <-> Sold)
+					if (stage == 40 && messageName == "update")
+					{
+						Entity preImage = context.PreEntityImages.Contains("PreImage") ? context.PreEntityImages["PreImage"] : new Entity(entityName);
+						HandleDealStatusChange(target, preImage, service, tracingService);
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				tracingService.Trace($"Plugin Exception: {ex.Message}");
+				throw new InvalidPluginExecutionException($"Plugin Error: {ex.Message}", ex);
+			}
+		}
+
+		#region 1. Deal Line Math (Pre-Operation)
+
+		private void CalculateDealLineMetrics(Entity target, Entity preImage, ITracingService tracingService)
+		{
+			tracingService.Trace("Calculating Deal Line Financial Metrics...");
+
+			decimal quantity = GetDecimalValue(target, preImage, "new_quantity");
+			decimal rateCharged = GetMoneyValue(target, preImage, "new_rate");
+			decimal rateCard = GetMoneyValue(target, preImage, "new_ratecard");
+
+			decimal total = quantity * rateCharged;
+			decimal listRate = quantity * rateCard;
+			decimal gainLoss = total - listRate;
+
+			decimal yieldValue = 0m;
+			if (listRate != 0)
+			{
+				yieldValue = total / listRate;
+			}
+
+			target["new_total"] = new Money(total);
+			target["new_listrate"] = new Money(listRate);
+			target["new_gainloss"] = new Money(gainLoss);
+			target["new_yield"] = yieldValue;
+
+			tracingService.Trace($"Metrics Calculated -> Total: {total}, Yield: {yieldValue}");
+		}
+
+		#endregion
+
+		#region 2. Rollup to Parent Deal (Post-Operation)
+
+		private void RollupTotalsToParentDeal(Guid dealId, IOrganizationService service, ITracingService tracingService)
+		{
+			tracingService.Trace($"Rolling up Net Totals to Parent Deal: {dealId}");
+
+			string fetchXml = $@"
+                <fetch aggregate='true'>
+                  <entity name='new_deallines'>
+                    <attribute name='new_total' alias='sum_total' aggregate='sum' />
+                    <filter>
+                      <condition attribute='new_dealid' operator='eq' value='{dealId}' />
+                    </filter>
+                  </entity>
+                </fetch>";
+
+			EntityCollection result = service.RetrieveMultiple(new FetchExpression(fetchXml));
+			decimal netTotal = 0m;
+
+			if (result.Entities.Count > 0 && result.Entities[0].Contains("sum_total"))
+			{
+				AliasedValue aliasedTotal = (AliasedValue)result.Entities[0]["sum_total"];
+				netTotal = ((Money)aliasedTotal.Value).Value;
+			}
+
+			Entity dealToUpdate = new Entity("new_deals", dealId);
+			dealToUpdate["new_total"] = new Money(netTotal);
+			service.Update(dealToUpdate);
+		}
+
+		#endregion
+
+		#region 3. Inventory Allocation Logic (Post-Operation)
+
+		private void UpdateInventoryDeltaFromLine(Entity target, Entity preImage, string messageName, Guid dealId, IOrganizationService service, ITracingService tracingService)
+		{
+			tracingService.Trace("Calculating Inventory Delta from Line change...");
+
+			Guid inventoryId = GetLookupId(target, preImage, "new_inventory");
+			if (inventoryId == Guid.Empty) return;
+
+			decimal oldQty = (messageName == "delete") ? GetDecimalValue(preImage, preImage, "new_quantity") : 0m;
+			decimal newQty = (messageName == "delete") ? 0m : GetDecimalValue(target, preImage, "new_quantity");
+
+			if (messageName == "update")
+			{
+				oldQty = GetDecimalValue(preImage, preImage, "new_quantity");
+			}
+
+			decimal deltaQty = newQty - oldQty;
+			if (deltaQty == 0) return;
+
+			Entity parentDeal = service.Retrieve("new_deals", dealId, new ColumnSet("new_dealstatus"));
+			string dealCode = GetStatusCodeFromLookup(parentDeal, "new_dealstatus", service);
+
+			decimal pitchedDelta = 0m;
+			decimal soldDelta = 0m;
+
+			if (dealCode == "DS-1008") // Closed Won
+			{
+				soldDelta = deltaQty;
+			}
+			else if (dealCode != "DS-1009") // Open (Not won, not lost)
+			{
+				pitchedDelta = deltaQty;
+			}
+
+			UpdateInventoryBuckets(inventoryId, pitchedDelta, soldDelta, service);
+		}
+
+		private void HandleDealStatusChange(Entity target, Entity preImage, IOrganizationService service, ITracingService tracingService)
+		{
+			if (!target.Contains("new_dealstatus")) return;
+
+			EntityReference oldStatusRef = preImage.Contains("new_dealstatus") ? preImage.GetAttributeValue<EntityReference>("new_dealstatus") : null;
+			EntityReference newStatusRef = target.GetAttributeValue<EntityReference>("new_dealstatus");
+
+			string oldCode = oldStatusRef != null ? GetStatusCodeFromLookup(oldStatusRef, service) : "";
+			string newCode = newStatusRef != null ? GetStatusCodeFromLookup(newStatusRef, service) : "";
+
+			if (oldCode == newCode) return;
+
+			tracingService.Trace($"Deal Status Code changed from {oldCode} to {newCode}");
+
+			QueryExpression query = new QueryExpression("new_deallines")
+			{
+				ColumnSet = new ColumnSet("new_inventory", "new_quantity"),
+				Criteria = new FilterExpression
+				{
+					Conditions = { new ConditionExpression("new_dealid", ConditionOperator.Equal, target.Id) }
+				}
+			};
+
+			EntityCollection dealLines = service.RetrieveMultiple(query);
+
+			foreach (Entity line in dealLines.Entities)
+			{
+				if (!line.Contains("new_inventory") || !line.Contains("new_quantity")) continue;
+
+				Guid inventoryId = line.GetAttributeValue<EntityReference>("new_inventory").Id;
+				decimal qty = line.GetAttributeValue<decimal>("new_quantity");
+
+				decimal pitchedDelta = 0m;
+				decimal soldDelta = 0m;
+
+				if (newCode == "DS-1008" && oldCode != "DS-1009")
+				{
+					pitchedDelta = -qty;
+					soldDelta = qty;
+				}
+				else if (newCode == "DS-1009" && oldCode != "DS-1008")
+				{
+					pitchedDelta = -qty;
+				}
+				else if (oldCode == "DS-1008" && newCode != "DS-1009")
+				{
+					soldDelta = -qty;
+					pitchedDelta = qty;
+				}
+				else if (oldCode == "DS-1009" && newCode != "DS-1008")
+				{
+					pitchedDelta = qty;
+				}
+
+				UpdateInventoryBuckets(inventoryId, pitchedDelta, soldDelta, service);
+			}
+		}
+
+		private void UpdateInventoryBuckets(Guid inventoryId, decimal pitchedDelta, decimal soldDelta, IOrganizationService service)
+		{
+			if (pitchedDelta == 0 && soldDelta == 0) return;
+
+			Entity inventory = service.Retrieve("new_inventory", inventoryId, new ColumnSet("new_quantity", "new_pitched", "new_sold"));
+
+			decimal baseQty = inventory.Contains("new_quantity") ? inventory.GetAttributeValue<decimal>("new_quantity") : 0m;
+			decimal currentPitched = inventory.Contains("new_pitched") ? inventory.GetAttributeValue<decimal>("new_pitched") : 0m;
+
+			// new_sold is read safely thanks to our GetDecimalValue logic, but we still handle it explicitly if needed.
+			decimal currentSold = GetDecimalValue(inventory, inventory, "new_sold");
+
+			decimal newPitched = currentPitched + pitchedDelta;
+			decimal newSold = currentSold + soldDelta;
+			decimal newAllocated = newPitched + newSold;
+			decimal newUnsold = baseQty - newSold;
+
+			Entity inventoryUpdate = new Entity("new_inventory", inventoryId);
+			inventoryUpdate["new_pitched"] = newPitched; 
+			inventoryUpdate["new_sold"] = Convert.ToInt32(newSold);
+			inventoryUpdate["new_allocated"] = newAllocated;
+			inventoryUpdate["new_unsold"] = Convert.ToInt32(newUnsold);
+
+			service.Update(inventoryUpdate);
+		}
+
+		#endregion
+
+		#region Helper Methods
+
+		private decimal GetDecimalValue(Entity target, Entity preImage, string attributeName)
+		{
+			object value = null;
+
+			if (target.Contains(attributeName))
+			{
+				value = target[attributeName];
+			}
+			else if (preImage.Contains(attributeName))
+			{
+				value = preImage[attributeName];
+			}
+
+			if (value == null) return 0m;
+
+			try
+			{
+				return Convert.ToDecimal(value);
+			}
+			catch
+			{
+				return 0m;
+			}
+		}
+
+		private decimal GetMoneyValue(Entity target, Entity preImage, string attributeName)
+		{
+			if (target.Contains(attributeName))
+				return target.GetAttributeValue<Money>(attributeName)?.Value ?? 0m;
+			if (preImage.Contains(attributeName))
+				return preImage.GetAttributeValue<Money>(attributeName)?.Value ?? 0m;
+			return 0m;
+		}
+
+		private Guid GetLookupId(Entity target, Entity preImage, string attributeName)
+		{
+			if (target.Contains(attributeName) && target[attributeName] != null)
+				return target.GetAttributeValue<EntityReference>(attributeName).Id;
+			if (preImage.Contains(attributeName) && preImage[attributeName] != null)
+				return preImage.GetAttributeValue<EntityReference>(attributeName).Id;
+			return Guid.Empty;
+		}
+
+		private string GetStatusCodeFromLookup(Entity entityWithLookup, string lookupLogicalName, IOrganizationService service)
+		{
+			if (!entityWithLookup.Contains(lookupLogicalName) || entityWithLookup[lookupLogicalName] == null) return "";
+
+			EntityReference lookupRef = entityWithLookup.GetAttributeValue<EntityReference>(lookupLogicalName);
+			return GetStatusCodeFromLookup(lookupRef, service);
+		}
+
+		private string GetStatusCodeFromLookup(EntityReference lookupRef, IOrganizationService service)
+		{
+			if (lookupRef == null) return "";
+
+			Entity statusRecord = service.Retrieve(lookupRef.LogicalName, lookupRef.Id, new ColumnSet("new_code"));
+			return statusRecord.Contains("new_code") ? statusRecord.GetAttributeValue<string>("new_code") : "";
+		}
+
+		#endregion
+	}
+}

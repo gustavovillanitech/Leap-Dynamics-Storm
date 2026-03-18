@@ -191,7 +191,8 @@ OpportunityForm.filterTicketingStage = function(formContext) {
         100000001: [100000000, 100000001, 100000002, 100000007, 100000005, 100000006], //Ticketing - Groups
         100000004: [100000000, 100000010, 100000011, 100000012, 100000013, 100000005, 100000006], //Ticketing - Premium Sales
         100000005: [100000000, 100000014, 100000015, 100000016, 100000017, 100000018, 100000019, 100000020, 100000021, 100000022, 100000006], //Ticketing - Premium Service
-        100000002: [100000031, 100000032, 100000033, 100000044, 100000045, 100000034, 100000037, 100000046, 100000039, 100000040, 100000036, 100000041, 100000042, 100000043] //Ticketing - Service
+        100000002: [100000031, 100000032, 100000033, 100000044, 100000045, 100000034, 100000037, 100000046, 100000039, 100000040, 100000036, 100000041, 100000042, 100000043], //Ticketing - Service
+        100000007: [100000031, 100000032, 100000033, 100000044, 100000045, 100000034, 100000037, 100000046, 100000039, 100000040, 100000036, 100000041, 100000042, 100000043] //Ticketing - Service
     };
     
     ctrl.clearOptions();
@@ -394,7 +395,7 @@ OpportunityForm.filterOpportunityTypeByApp = function(formContext) {
 
         // Check if the current app is not "new_CorporatePartnerships"
         if (appProperties.uniqueName !== "new_CorporatePartnerships") {
-            var allowedTypes = [100000000, 100000001,100000004,100000002,100000005]; // Ticketing - New FSE, Ticketing - Groups, Ticketing - Premium Sales, Ticketing - Service, Ticketing - Premium Service
+            var allowedTypes = [100000000, 100000001,100000004,100000002,100000005,100000007]; // Ticketing - New FSE, Ticketing - Groups, Ticketing - Premium Sales, Ticketing - Service, Ticketing - Premium Service, Ticketing - Membership Renewal
             
             ctrl.clearOptions();
             
