@@ -50,8 +50,9 @@ namespace Pl.Email.SuppressInternalEmployeeEmailTracking
 				var partyFields = new[] { "from", "to", "cc", "bcc" };
 
 				// --- Step 1: Collect all Contact IDs across all party fields ---
-				// We do this first to enable bulk retrieval and avoid per-record DB calls
-				var contactPartyMap = new Dictionary<Guid, List<(string Field, Entity Party)>>();
+				// Key: ContactId | Value: list of (FieldName, PartyEntity, ParentEntityCollection)
+				// We store the EntityCollection reference per field to allow in-memory removal if needed
+				var contactPartyMap = new Dictionary<Guid, List<(string Field, Entity Party, EntityCollection ParentCollection)>>();
 
 				foreach (var field in partyFields)
 				{
@@ -73,9 +74,9 @@ namespace Pl.Email.SuppressInternalEmployeeEmailTracking
 						}
 
 						if (!contactPartyMap.ContainsKey(partyRef.Id))
-							contactPartyMap[partyRef.Id] = new List<(string, Entity)>();
+							contactPartyMap[partyRef.Id] = new List<(string, Entity, EntityCollection)>();
 
-						contactPartyMap[partyRef.Id].Add((field, party));
+						contactPartyMap[partyRef.Id].Add((field, party, parties));
 						tracingService.Trace($"Field '{field}': Queued Contact Id {partyRef.Id} for bulk retrieval.");
 					}
 				}
@@ -93,7 +94,10 @@ namespace Pl.Email.SuppressInternalEmployeeEmailTracking
 				{
 					ColumnSet = new ColumnSet("emailaddress1", InternalEmployeeField)
 				};
-				contactQuery.Criteria.AddCondition("contactid", ConditionOperator.In, contactPartyMap.Keys.Cast<object>().ToArray());
+				contactQuery.Criteria.AddCondition(
+					"contactid", ConditionOperator.In,
+					contactPartyMap.Keys.Cast<object>().ToArray()
+				);
 
 				var contacts = service.RetrieveMultiple(contactQuery);
 				tracingService.Trace($"Contacts retrieved from DB: {contacts.Entities.Count}");
@@ -106,17 +110,15 @@ namespace Pl.Email.SuppressInternalEmployeeEmailTracking
 					var isInternal = contact.GetAttributeValue<bool>(InternalEmployeeField);
 					var emailAddress = contact.GetAttributeValue<string>("emailaddress1") ?? string.Empty;
 
-					bool shouldProcess = isInternal;
+					tracingService.Trace($"Contact Id: {contact.Id} | Email: {emailAddress} | IsInternal: {isInternal}");
 
-					tracingService.Trace($"Contact Id: {contact.Id} | Email: {emailAddress} | IsInternal: {isInternal} | ShouldProcess: {shouldProcess}");
-
-					if (shouldProcess)
+					if (isInternal)
 						internalContactEmails[contact.Id] = emailAddress;
 				}
 
 				if (internalContactEmails.Count == 0)
 				{
-					tracingService.Trace("No internal employee Contacts found. No swap needed. Exiting plugin.");
+					tracingService.Trace("No internal employee Contacts found. No action needed. Exiting plugin.");
 					return;
 				}
 
@@ -129,19 +131,21 @@ namespace Pl.Email.SuppressInternalEmployeeEmailTracking
 				{
 					ColumnSet = new ColumnSet("systemuserid", "internalemailaddress")
 				};
-				userQuery.Criteria.AddCondition("internalemailaddress", ConditionOperator.In, emailList);
+				userQuery.Criteria.AddCondition(
+					"internalemailaddress", ConditionOperator.In, emailList
+				);
 
 				var systemUsers = service.RetrieveMultiple(userQuery);
 				tracingService.Trace($"SystemUsers retrieved from DB: {systemUsers.Entities.Count}");
 
-				// Build a lookup: email (lowercase) → systemuser EntityReference
+				// Build lookup: email (lowercase) → SystemUser EntityReference
 				var userLookup = systemUsers.Entities
 					.ToDictionary(
 						u => (u.GetAttributeValue<string>("internalemailaddress") ?? string.Empty).ToLower(),
 						u => new EntityReference("systemuser", u.Id)
 					);
 
-				// --- Step 5: Perform the swap on the Target (in-memory, Pre-Operation) ---
+				// --- Step 5: Swap or Remove duplicate on the Target (in-memory, Pre-Operation) ---
 				foreach (var kvp in internalContactEmails)
 				{
 					var contactId = kvp.Key;
@@ -149,19 +153,38 @@ namespace Pl.Email.SuppressInternalEmployeeEmailTracking
 
 					if (!contactPartyMap.ContainsKey(contactId)) continue;
 
-					foreach (var (field, party) in contactPartyMap[contactId])
+					foreach (var (field, party, parentCollection) in contactPartyMap[contactId])
 					{
-						if (userLookup.TryGetValue(contactEmail, out var systemUserRef))
+						if (!userLookup.TryGetValue(contactEmail, out var systemUserRef))
 						{
-							// Swap: point partyid to SystemUser instead of Contact
-							party["partyid"] = systemUserRef;
-							party["partyobjecttypecode"] = "systemuser";
-							tracingService.Trace($"Field '{field}': Swapped Contact {contactId} → SystemUser {systemUserRef.Id} for email '{contactEmail}'.");
+							// No matching SystemUser found — leave Contact as-is (fallback)
+							tracingService.Trace($"Field '{field}': No matching SystemUser found for '{contactEmail}'. Leaving Contact reference as fallback.");
+							continue;
+						}
+
+						// Check if a SystemUser party already exists in the same field
+						// This happens when Dynamics auto-resolves both Contact AND SystemUser
+						bool systemUserAlreadyPresent = parentCollection.Entities.Any(p =>
+						{
+							var pRef = p.GetAttributeValue<EntityReference>("partyid");
+							return pRef != null &&
+								   pRef.LogicalName == "systemuser" &&
+								   pRef.Id == systemUserRef.Id;
+						});
+
+						if (systemUserAlreadyPresent)
+						{
+							// Duplicate scenario: SystemUser already exists in this field
+							// Remove the Contact party from the in-memory collection to avoid duplication
+							parentCollection.Entities.Remove(party);
+							tracingService.Trace($"Field '{field}': SystemUser {systemUserRef.Id} already present. Removed duplicate Contact party for '{contactEmail}'.");
 						}
 						else
 						{
-							// Fallback: no matching SystemUser found, leave Contact as-is
-							tracingService.Trace($"Field '{field}': No matching SystemUser found for '{contactEmail}'. Leaving Contact reference as fallback.");
+							// Clean swap: no SystemUser party exists yet, point Contact party to SystemUser
+							party["partyid"] = systemUserRef;
+							party["partyobjecttypecode"] = "systemuser";
+							tracingService.Trace($"Field '{field}': Swapped Contact {contactId} → SystemUser {systemUserRef.Id} for '{contactEmail}'.");
 						}
 					}
 				}
