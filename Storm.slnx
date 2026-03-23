@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/Consoles/">
+    <Project Path="Consoles/InventoryCloning/InventoryCloning.csproj" Id="63258366-ccfe-4b8e-bb90-3d5dab55e6ce" />
+    <Project Path="Consoles/InventoryRecalculator/InventoryRecalculator.csproj" Id="4a35991c-a720-4bd3-b94e-f95d6926be01" />
     <Project Path="Consoles/TrakImport/TrakImport.csproj" />
   </Folder>
   <Folder Name="/Javascript/">

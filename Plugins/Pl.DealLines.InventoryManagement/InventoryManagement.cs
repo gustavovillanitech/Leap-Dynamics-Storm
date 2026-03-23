@@ -165,7 +165,7 @@ namespace Pl.DealLines.InventoryManagement
 				pitchedDelta = deltaQty;
 			}
 
-			UpdateInventoryBuckets(inventoryId, pitchedDelta, soldDelta, service);
+			UpdateInventoryBuckets(inventoryId, pitchedDelta, soldDelta, service, tracingService);
 		}
 
 		private void HandleDealStatusChange(Entity target, Entity preImage, IOrganizationService service, ITracingService tracingService)
@@ -191,14 +191,23 @@ namespace Pl.DealLines.InventoryManagement
 				}
 			};
 
+			tracingService.Trace("Retrieving Deal Lines...");
 			EntityCollection dealLines = service.RetrieveMultiple(query);
+			tracingService.Trace($"Deal Lines found: {dealLines.Entities.Count}");
 
 			foreach (Entity line in dealLines.Entities)
 			{
 				if (!line.Contains("new_inventory") || !line.Contains("new_quantity")) continue;
 
+				tracingService.Trace($"Processing Deal Line ID: {line.Id}");
+
+				// Read Lookup
+				tracingService.Trace("Getting Inventory ID...");
 				Guid inventoryId = line.GetAttributeValue<EntityReference>("new_inventory").Id;
-				decimal qty = line.GetAttributeValue<decimal>("new_quantity");
+
+				// Safe reading of quantity
+				tracingService.Trace("Getting Quantity from Deal Line...");
+				decimal qty = GetDecimalValue(line, line, "new_quantity");
 
 				decimal pitchedDelta = 0m;
 				decimal soldDelta = 0m;
@@ -222,20 +231,21 @@ namespace Pl.DealLines.InventoryManagement
 					pitchedDelta = qty;
 				}
 
-				UpdateInventoryBuckets(inventoryId, pitchedDelta, soldDelta, service);
+				tracingService.Trace($"Calling UpdateInventoryBuckets for inventory: {inventoryId}");
+				UpdateInventoryBuckets(inventoryId, pitchedDelta, soldDelta, service, tracingService);
 			}
 		}
 
-		private void UpdateInventoryBuckets(Guid inventoryId, decimal pitchedDelta, decimal soldDelta, IOrganizationService service)
+		private void UpdateInventoryBuckets(Guid inventoryId, decimal pitchedDelta, decimal soldDelta, IOrganizationService service, ITracingService tracingService)
 		{
 			if (pitchedDelta == 0 && soldDelta == 0) return;
 
+			tracingService.Trace("Retrieving Inventory record...");
 			Entity inventory = service.Retrieve("new_inventory", inventoryId, new ColumnSet("new_quantity", "new_pitched", "new_sold"));
 
-			decimal baseQty = inventory.Contains("new_quantity") ? inventory.GetAttributeValue<decimal>("new_quantity") : 0m;
-			decimal currentPitched = inventory.Contains("new_pitched") ? inventory.GetAttributeValue<decimal>("new_pitched") : 0m;
-
-			// new_sold is read safely thanks to our GetDecimalValue logic, but we still handle it explicitly if needed.
+			tracingService.Trace("Calculating new quantities...");
+			decimal baseQty = GetDecimalValue(inventory, inventory, "new_quantity");
+			decimal currentPitched = GetDecimalValue(inventory, inventory, "new_pitched");
 			decimal currentSold = GetDecimalValue(inventory, inventory, "new_sold");
 
 			decimal newPitched = currentPitched + pitchedDelta;
@@ -244,12 +254,16 @@ namespace Pl.DealLines.InventoryManagement
 			decimal newUnsold = baseQty - newSold;
 
 			Entity inventoryUpdate = new Entity("new_inventory", inventoryId);
-			inventoryUpdate["new_pitched"] = newPitched; 
-			inventoryUpdate["new_sold"] = Convert.ToInt32(newSold);
-			inventoryUpdate["new_allocated"] = newAllocated;
-			inventoryUpdate["new_unsold"] = Convert.ToInt32(newUnsold);
 
+			// Note: If fields in CRM were not deleted and recreated as Decimals, this service.Update will crash
+			inventoryUpdate["new_pitched"] = newPitched;
+			inventoryUpdate["new_sold"] = newSold;
+			inventoryUpdate["new_allocated"] = newAllocated;
+			inventoryUpdate["new_unsold"] = newUnsold;
+
+			tracingService.Trace($"Updating inventory in Dynamics -> Pitched: {newPitched}, Sold: {newSold}");
 			service.Update(inventoryUpdate);
+			tracingService.Trace("Inventory updated successfully.");
 		}
 
 		#endregion
