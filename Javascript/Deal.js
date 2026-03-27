@@ -11,6 +11,7 @@ DealForm.onLoad = function (executionContext) {
     
     // Check if we are creating from a subgrid and sync the account on load
     DealForm.setDefaultAccountFromOpportunity(executionContext);
+    DealForm.toggleOptOutDeadlineVisibility(executionContext);
 };
 
 /**
@@ -175,4 +176,42 @@ DealForm.lockGridDealLineFields = function(executionContext) {
             control.setDisabled(true); // Bloquea la celda
         }
     });
+};
+
+/**
+ * Toggles the visibility and requirement level of the Opt-Out Deadline field.
+ * Triggered by the Revenue Certainty choice field.
+ * @param {object} executionContext
+ */
+DealForm.toggleOptOutDeadlineVisibility = function (executionContext) {
+    var formContext = executionContext.getFormContext();
+
+    var certaintyAttr = formContext.getAttribute("new_revenuecertainty");
+    
+    var deadlineCtrl = formContext.getControl("new_optoutdeadline");
+    var deadlineAttr = formContext.getAttribute("new_optoutdeadline");
+
+    if (certaintyAttr && deadlineCtrl && deadlineAttr) {
+        var certaintyValue = certaintyAttr.getValue();
+
+        var AT_RISK_VALUE = 100000002; //"At-Risk"
+        var isAtRisk = (certaintyValue === AT_RISK_VALUE);
+
+        deadlineCtrl.setVisible(isAtRisk);
+
+        if (isAtRisk) {
+            deadlineAttr.setRequiredLevel("required");
+        } else {
+            deadlineAttr.setRequiredLevel("none");
+            deadlineAttr.setValue(null); 
+        }
+    }
+};
+
+/**
+ * Triggered on the Revenue Certainty OnChange event.
+ * @param {object} executionContext 
+ */
+DealForm.onRevenueCertaintyChange = function (executionContext) {
+    DealForm.toggleOptOutDeadlineVisibility(executionContext);
 };
