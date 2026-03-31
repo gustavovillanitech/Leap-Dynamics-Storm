@@ -13,10 +13,26 @@ namespace Pl.DealLines.InventoryManagement
 			IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
 			ITracingService tracingService = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
 
-			if (!context.InputParameters.Contains("Target") || !(context.InputParameters["Target"] is Entity))
+			if (!context.InputParameters.Contains("Target"))
 				return;
+			Entity target = null;
+			// 1. Check whether the target is an entity (Create / Update)
+			if (context.InputParameters["Target"] is Entity)
+			{
+				target = (Entity)context.InputParameters["Target"];
+			}
+			// 2. Check whether the Target is an EntityReference (Delete)
+			else if (context.InputParameters["Target"] is EntityReference)
+			{
+				EntityReference targetRef = (EntityReference)context.InputParameters["Target"];
+				// We create a dummy entity with the ID so that the rest of the code doesn't fail
+				target = new Entity(targetRef.LogicalName) { Id = targetRef.Id };
+			}
+			else
+			{
+				return; // If it is neither an Entity nor an EntityReference, we exit.
+			}
 
-			Entity target = (Entity)context.InputParameters["Target"];
 			string entityName = context.PrimaryEntityName;
 			string messageName = context.MessageName.ToLower();
 			int stage = context.Stage;
@@ -105,14 +121,14 @@ namespace Pl.DealLines.InventoryManagement
 			tracingService.Trace($"Rolling up Net Totals to Parent Deal: {dealId}");
 
 			string fetchXml = $@"
-                <fetch aggregate='true'>
-                  <entity name='new_deallines'>
-                    <attribute name='new_total' alias='sum_total' aggregate='sum' />
-                    <filter>
-                      <condition attribute='new_dealid' operator='eq' value='{dealId}' />
-                    </filter>
-                  </entity>
-                </fetch>";
+								<fetch aggregate='true'>
+									<entity name='new_deallines'>
+									<attribute name='new_total' alias='sum_total' aggregate='sum' />
+									<filter>
+										<condition attribute='new_dealid' operator='eq' value='{dealId}' />
+									</filter>
+									</entity>
+								</fetch>";
 
 			EntityCollection result = service.RetrieveMultiple(new FetchExpression(fetchXml));
 			decimal netTotal = 0m;
@@ -120,7 +136,12 @@ namespace Pl.DealLines.InventoryManagement
 			if (result.Entities.Count > 0 && result.Entities[0].Contains("sum_total"))
 			{
 				AliasedValue aliasedTotal = (AliasedValue)result.Entities[0]["sum_total"];
-				netTotal = ((Money)aliasedTotal.Value).Value;
+
+				// Check that the internal value is not zero before reading the Money
+				if (aliasedTotal != null && aliasedTotal.Value != null)
+				{
+					netTotal = ((Money)aliasedTotal.Value).Value;
+				}
 			}
 
 			Entity dealToUpdate = new Entity("new_deals", dealId);

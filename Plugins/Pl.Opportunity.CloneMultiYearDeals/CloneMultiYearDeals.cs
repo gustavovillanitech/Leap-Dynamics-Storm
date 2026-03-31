@@ -37,9 +37,11 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 				if (oppId == Guid.Empty) return;
 
 				// 1. Retrieve Master Opportunity 
+				// Missing fields to ColumnSet (campaignid, new_leadsource, budgetstatus, new_pitchtype, new_confidencelevel, estimatedvalue)
 				Entity opp = service.Retrieve("opportunity", oppId, new ColumnSet(
 					"name", "parentaccountid", "parentcontactid", "new_pitchdate", "estimatedclosedate",
-					"new_opportunitytype", "new_pitchedcontractlength", "new_escalator"
+					"new_opportunitytype", "new_pitchedcontractlength", "new_escalator",
+					"campaignid", "new_leadsource", "budgetstatus", "new_pitchtype", "new_confidencelevel", "estimatedvalue"
 				));
 
 				if (!opp.Contains("new_opportunitytype")) return;
@@ -77,11 +79,13 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 				decimal multiplier = 1m + (escalatorPercent / 100m);
 				decimal currentMultiplier = 1m;
 
-				// 5. Retrieve Base Deal Lines (Only unlocked fields we need to copy/escalate)
+				// 5. Retrieve Base Deal Lines 
+				// new_seasonid and new_ratecard to the retrieve query
 				QueryExpression lineQuery = new QueryExpression("new_deallines")
 				{
 					ColumnSet = new ColumnSet(
-					"new_name", "new_inventory", "new_quantity", "new_discount", "new_rate", "new_notes"
+					"new_name", "new_inventory", "new_quantity", "new_discount", "new_rate", "new_notes",
+					"new_seasonid", "new_ratecard"
 				)
 				};
 				lineQuery.Criteria.AddCondition("new_dealid", ConditionOperator.Equal, baseDeal.Id);
@@ -110,9 +114,18 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 					if (opp.Contains("name"))
 						newOpp["name"] = opp.GetAttributeValue<string>("name").Replace(startYear.ToString(), targetYear.ToString());
 
-					if (opp.Contains("parentaccountid")) newOpp["parentaccountid"] = opp["parentaccountid"];
+					// Array to easily loop and copy all requested direct fields from Original Opportunity
+					string[] oppFieldsToCopy = {
+						"parentaccountid", "parentcontactid", "campaignid", "new_leadsource",
+						"budgetstatus", "new_pitchtype", "new_pitchedcontractlength",
+						"new_confidencelevel", "estimatedvalue"
+					};
+					foreach (string of in oppFieldsToCopy)
+					{
+						if (opp.Contains(of)) newOpp[of] = opp[of];
+					}
 
-					// Shift dates forward
+					// Shift dates forward (Maintained logic to move dates to future years)
 					if (opp.Contains("new_pitchdate"))
 						newOpp["new_pitchdate"] = opp.GetAttributeValue<DateTime>("new_pitchdate").AddYears(i - 1);
 					if (opp.Contains("estimatedclosedate"))
@@ -137,9 +150,7 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 					}
 
 					// Evaluate Risk
-					// Cloned deals will now always default to 'Guaranteed' (100000000). 
-					// The new Opt-Out Type field and Business Rule will handle any 'At Risk' logic dynamically from the UI.
-					newDeal["new_revenuecertainty"] = new OptionSetValue(100000000);
+					newDeal["new_revenuecertainty"] = new OptionSetValue(100000000); // Default to Guaranteed
 
 					Guid newDealId = service.Create(newDeal);
 
@@ -152,11 +163,17 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 						if (line.Contains("new_name"))
 							newLine["new_name"] = line.GetAttributeValue<string>("new_name").Replace(startYear.ToString(), targetYear.ToString());
 
-						// Copy direct input fields (No locked fields)
-						string[] lineFieldsToCopy = { "new_inventory", "new_quantity", "new_discount", "new_notes" };
+						// new_ratecard to the fields to copy directly
+						string[] lineFieldsToCopy = { "new_inventory", "new_quantity", "new_discount", "new_notes", "new_ratecard" };
 						foreach (string lf in lineFieldsToCopy)
 						{
 							if (line.Contains(lf)) newLine[lf] = line[lf];
+						}
+
+						// Set the season on the Deal Line to the FUTURE season being created, not the old one
+						if (line.Contains("new_seasonid"))
+						{
+							newLine["new_seasonid"] = targetSeason.ToEntityReference();
 						}
 
 						// Escalate the input Rate (Rate Charged)
