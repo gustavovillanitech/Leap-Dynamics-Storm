@@ -36,16 +36,15 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 
 				if (oppId == Guid.Empty) return;
 
-				// 1. Retrieve Master Opportunity (Added name and dates for cloning)
+				// 1. Retrieve Master Opportunity 
 				Entity opp = service.Retrieve("opportunity", oppId, new ColumnSet(
 					"name", "parentaccountid", "parentcontactid", "new_pitchdate", "estimatedclosedate",
-					"new_opportunitytype", "new_pitchedcontractlength", "new_escalator",
-					"new_hasoptoutoption", "new_firstoptoutseason"
+					"new_opportunitytype", "new_pitchedcontractlength", "new_escalator"
 				));
 
 				if (!opp.Contains("new_opportunitytype")) return;
 				int oppType = opp.GetAttributeValue<OptionSetValue>("new_opportunitytype").Value;
-				if (oppType != 100000003 && oppType != 100000006) return;
+				if (oppType != 100000003 && oppType != 100000006) return; //Corporate Partnership Prospect (100000003) or Corporate Partnership Current (100000006) Only
 
 				if (!opp.Contains("new_pitchedcontractlength")) return;
 				int optionValue = opp.GetAttributeValue<OptionSetValue>("new_pitchedcontractlength").Value;
@@ -73,15 +72,7 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 				string seasonName = baseSeason.GetAttributeValue<string>("new_name");
 				string seasonSuffix = seasonName.Replace(startYear.ToString(), "").Trim(' ', '-');
 
-				// 4. Opt-Out & Financial Math setup
-				bool hasOptOut = opp.GetAttributeValue<bool>("new_hasoptoutoption");
-				int optOutYear = 9999;
-				if (hasOptOut && opp.Contains("new_firstoptoutseason"))
-				{
-					Entity optOutSeason = service.Retrieve("new_season", opp.GetAttributeValue<EntityReference>("new_firstoptoutseason").Id, new ColumnSet("new_seasonyear"));
-					optOutYear = optOutSeason.GetAttributeValue<int>("new_seasonyear");
-				}
-
+				// 4. Financial Math setup 
 				decimal escalatorPercent = opp.Contains("new_escalator") ? opp.GetAttributeValue<decimal>("new_escalator") : 0m;
 				decimal multiplier = 1m + (escalatorPercent / 100m);
 				decimal currentMultiplier = 1m;
@@ -120,7 +111,6 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 						newOpp["name"] = opp.GetAttributeValue<string>("name").Replace(startYear.ToString(), targetYear.ToString());
 
 					if (opp.Contains("parentaccountid")) newOpp["parentaccountid"] = opp["parentaccountid"];
-					if (opp.Contains("parentcontactid")) newOpp["parentcontactid"] = opp["parentcontactid"];
 
 					// Shift dates forward
 					if (opp.Contains("new_pitchdate"))
@@ -147,7 +137,9 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 					}
 
 					// Evaluate Risk
-					newDeal["new_revenuecertainty"] = (hasOptOut && targetYear >= optOutYear) ? new OptionSetValue(100000002) : new OptionSetValue(100000000);
+					// Cloned deals will now always default to 'Guaranteed' (100000000). 
+					// The new Opt-Out Type field and Business Rule will handle any 'At Risk' logic dynamically from the UI.
+					newDeal["new_revenuecertainty"] = new OptionSetValue(100000000);
 
 					Guid newDealId = service.Create(newDeal);
 
