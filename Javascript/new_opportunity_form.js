@@ -456,20 +456,84 @@ OpportunityFormCP.setTopicPlaceholder = function(formContext) {
     }
 };
 
+// --- Custom Loading Screen for Sync Close Process ---
 OpportunityFormCP.onSave = function(executionContext) {
     var formContext = executionContext.getFormContext();
-    
-    // Refresh Timeline
-    OpportunityForm.refreshTimeline(formContext);
+    var salesStageAttr = formContext.getAttribute("new_salesstage");
+    var isClosing = false;
 
-    // Refresh the record to fetch the Flow's generated name
-    // We wait 3 seconds to let the Flow finish
-    setTimeout(function () {
+    // Check if the Sales Stage field was modified during this transaction
+    if (salesStageAttr && salesStageAttr.getIsDirty()) {
+        var salesStage = salesStageAttr.getValue();
+
+        // Check if the stage is being set to a WON scenario (100000017: Current, 100000003: Prospect)
+        if (salesStage === 100000017 || salesStage === 100000003) {
+            isClosing = true;
+            var willClone = false;
+            
+            // Retrieve fields needed to evaluate the cloning logic
+            var oppTypeAttr = formContext.getAttribute("new_opportunitytype");
+            var contractLengthAttr = formContext.getAttribute("new_pitchedcontractlength");
+            
+            if (oppTypeAttr && contractLengthAttr) {
+                var oppType = oppTypeAttr.getValue();
+                var contractLength = contractLengthAttr.getValue();
+                
+                // Logic matching the C# Plugin
+                if ((oppType === 100000003 || oppType === 100000006) && contractLength > 100000000) {
+                    willClone = true;
+                }
+            }
+
+            // Display dynamic message
+            if (willClone) {
+                Xrm.Utility.showProgressIndicator("Closing Opportunity & Cloning Future Years. This may take a few seconds...");
+            } else {
+                Xrm.Utility.showProgressIndicator("Closing Opportunity...");
+            }
+            
+            // Register the post-save event to handle cleanup and safe data refresh
+            formContext.data.entity.addOnPostSave(OpportunityFormCP.postSave);
+        }
+    }
+
+    // IF NOT CLOSING: We run your original 2-second timeout refresh
+    // This handles normal saves where we are just waiting for a quick background Flow
+    if (!isClosing) {
+        setTimeout(function () {
+            formContext.data.refresh(false).then(
+                function() { console.log("Form refreshed with Flow data (Normal Save)."); },
+                function(error) { console.error("Error refreshing: " + error.message); }
+            );
+        }, 2000); 
+    }
+
+    // Always Refresh Timeline
+    OpportunityForm.refreshTimeline(formContext);
+};
+
+// Callback to hide the progress indicator and refresh data AFTER the server responds
+OpportunityFormCP.postSave = function(executionContext) {
+    var formContext = executionContext.getFormContext();
+
+    // 1. Hide the loading screen immediately so the user can see any native Plugin errors
+    Xrm.Utility.closeProgressIndicator();
+    
+    // 2. Remove the event listener to avoid duplicate triggers
+    formContext.data.entity.removeOnPostSave(OpportunityFormCP.postSave);
+
+    // 3. SAFE REFRESH LOGIC: 
+    // If the Sync Plugin throws an exception, the save is aborted and the form remains "Dirty" (unsaved).
+    // Attempting to refresh a dirty form triggers the native Dynamics "Unsaved changes" pop-up.
+    // We must ONLY refresh if the form is NOT dirty (meaning the save was 100% successful).
+    if (!formContext.data.entity.getIsDirty()) {
         formContext.data.refresh(false).then(
-            function() { console.log("Form refreshed with Flow data."); },
-            function(error) { console.error("Error refreshing: " + error.message); }
+            function() { console.log("Form refreshed successfully after Sync Plugin finished."); },
+            function(error) { console.error("Error refreshing post-save: " + error.message); }
         );
-    }, 2000); 
+    } else {
+        console.warn("Save aborted (likely due to Plugin Exception). Skipping form refresh to prevent UI conflicts.");
+    }
 };
 
 
