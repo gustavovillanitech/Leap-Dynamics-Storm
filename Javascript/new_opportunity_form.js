@@ -94,7 +94,6 @@ OpportunityFormCP.onLoad = function(executionContext) {
         OpportunityFormCP.applyFiltersCP(formContext);
         OpportunityFormCP.toggleLostReasonVisibilityCP(executionContext);
         OpportunityFormCP.setRequiredFieldsCP(executionContext);
-        OpportunityFormCP.toggleOptOutSeasonVisibility(executionContext);
     }
 };
 
@@ -636,38 +635,4 @@ OpportunityFormCP.generateTopicName = function(formContext) {
     if (newTopic !== "") {
         topicAttr.setValue(newTopic);
     }
-};
-
-// Manages the visibility and requirement level of the First Opt-Out Season field
-// based on the Has Opt-Out Option (Yes/No) field.
-OpportunityFormCP.toggleOptOutSeasonVisibility = function(executionContext) {
-    var formContext = executionContext.getFormContext();
-
-    var hasOptOutAttr = formContext.getAttribute("new_hasoptoutoption");
-    var optOutSeasonCtrl = formContext.getControl("new_firstoptoutseason");
-    var optOutSeasonAttr = formContext.getAttribute("new_firstoptoutseason");
-
-    // Safety check: Ensure fields exist on the form
-    if (hasOptOutAttr && optOutSeasonCtrl && optOutSeasonAttr) {
-        var hasOptOutValue = hasOptOutAttr.getValue();
-
-        // Check if value is true (Yes). Handle both boolean and option set values just in case.
-        var showSeason = (hasOptOutValue === true || hasOptOutValue === 1);
-
-        // 1. Toggle Visibility
-        optOutSeasonCtrl.setVisible(showSeason);
-
-        // 2. Manage Requirement Level and Data Integrity
-        if (showSeason) {
-            optOutSeasonAttr.setRequiredLevel("required");
-        } else {
-            optOutSeasonAttr.setRequiredLevel("none");
-            optOutSeasonAttr.setValue(null); // Clear value if hidden so we don't save ghost data
-        }
-    }
-};
-
-// --- Event Handler specifically for the OnChange of new_hasoptoutoption ---
-OpportunityFormCP.onHasOptOutChange = function(executionContext) {
-    OpportunityFormCP.toggleOptOutSeasonVisibility(executionContext);
 };

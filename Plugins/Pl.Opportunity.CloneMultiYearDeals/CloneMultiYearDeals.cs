@@ -15,10 +15,16 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 			ITracingService tracingService = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
 
 			tracingService.Trace($"--- PLUGIN STARTED: CloneMultiYearDeals (Full Architecture) ---");
+			tracingService.Trace($"Current Depth: {context.Depth}, Message: {context.MessageName}");
 
 			try
 			{
-				if (context.Depth > 1) return;
+				// Increased depth tolerance to 2 to allow synchronous workflows/Flows to trigger the plugin
+				if (context.Depth > 2)
+				{
+					tracingService.Trace("ABORT: Context Depth is greater than 2. Exiting to prevent infinite loops.");
+					return;
+				}
 
 				Guid oppId = Guid.Empty;
 
@@ -29,29 +35,55 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 				else if (context.MessageName.ToLower() == "update" && context.PrimaryEntityName == "opportunity")
 				{
 					Entity target = (Entity)context.InputParameters["Target"];
-					if (!target.Contains("statecode") || target.GetAttributeValue<OptionSetValue>("statecode").Value != 1) return;
+					if (!target.Contains("statecode") || target.GetAttributeValue<OptionSetValue>("statecode").Value != 1)
+					{
+						tracingService.Trace("ABORT: Update message but statecode is not Won (1).");
+						return;
+					}
 					oppId = target.Id;
 				}
-				else return;
+				else
+				{
+					tracingService.Trace("ABORT: Message is neither Win nor a Won Update.");
+					return;
+				}
 
 				if (oppId == Guid.Empty) return;
 
 				// 1. Retrieve Master Opportunity 
-				// Missing fields to ColumnSet (campaignid, new_leadsource, budgetstatus, new_pitchtype, new_confidencelevel, estimatedvalue)
 				Entity opp = service.Retrieve("opportunity", oppId, new ColumnSet(
 					"name", "parentaccountid", "parentcontactid", "new_pitchdate", "estimatedclosedate",
 					"new_opportunitytype", "new_pitchedcontractlength", "new_escalator",
 					"campaignid", "new_leadsource", "budgetstatus", "new_pitchtype", "new_confidencelevel", "estimatedvalue"
 				));
 
-				if (!opp.Contains("new_opportunitytype")) return;
-				int oppType = opp.GetAttributeValue<OptionSetValue>("new_opportunitytype").Value;
-				if (oppType != 100000003 && oppType != 100000006) return; //Corporate Partnership Prospect (100000003) or Corporate Partnership Current (100000006) Only
+				if (!opp.Contains("new_opportunitytype"))
+				{
+					tracingService.Trace("ABORT: Opportunity does not have new_opportunitytype.");
+					return;
+				}
 
-				if (!opp.Contains("new_pitchedcontractlength")) return;
+				int oppType = opp.GetAttributeValue<OptionSetValue>("new_opportunitytype").Value;
+				if (oppType != 100000003 && oppType != 100000006)
+				{
+					tracingService.Trace($"ABORT: OppType {oppType} is not Prospect or Current.");
+					return;
+				}
+
+				if (!opp.Contains("new_pitchedcontractlength"))
+				{
+					tracingService.Trace("ABORT: Opportunity does not have Pitched Contract Length.");
+					return;
+				}
+
 				int optionValue = opp.GetAttributeValue<OptionSetValue>("new_pitchedcontractlength").Value;
 				int totalYears = (optionValue - 100000000) + 1;
-				if (totalYears <= 1) return;
+
+				if (totalYears <= 1)
+				{
+					tracingService.Trace($"ABORT: Contract length is {totalYears} year(s). No cloning needed.");
+					return;
+				}
 
 				// 2. Retrieve Base Deal
 				QueryExpression dealQuery = new QueryExpression("new_deals")
@@ -64,7 +96,11 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 				dealQuery.Criteria.AddCondition("new_opportunity", ConditionOperator.Equal, opp.Id);
 				Entity baseDeal = service.RetrieveMultiple(dealQuery).Entities.FirstOrDefault();
 
-				if (baseDeal == null || !baseDeal.Contains("new_season")) return;
+				if (baseDeal == null || !baseDeal.Contains("new_season"))
+				{
+					tracingService.Trace("ABORT: No Base Deal found or Deal lacks a Season.");
+					return;
+				}
 
 				// 3. Season Math
 				EntityReference baseSeasonRef = baseDeal.GetAttributeValue<EntityReference>("new_season");
@@ -80,7 +116,6 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 				decimal currentMultiplier = 1m;
 
 				// 5. Retrieve Base Deal Lines 
-				// new_seasonid and new_ratecard to the retrieve query
 				QueryExpression lineQuery = new QueryExpression("new_deallines")
 				{
 					ColumnSet = new ColumnSet(
@@ -114,18 +149,20 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 					if (opp.Contains("name"))
 						newOpp["name"] = opp.GetAttributeValue<string>("name").Replace(startYear.ToString(), targetYear.ToString());
 
-					// Array to easily loop and copy all requested direct fields from Original Opportunity
 					string[] oppFieldsToCopy = {
 						"parentaccountid", "parentcontactid", "campaignid", "new_leadsource",
-						"budgetstatus", "new_pitchtype", "new_pitchedcontractlength",
-						"new_confidencelevel", "estimatedvalue"
+						"budgetstatus", "new_pitchtype", "new_confidencelevel", "estimatedvalue"
 					};
 					foreach (string of in oppFieldsToCopy)
 					{
 						if (opp.Contains(of)) newOpp[of] = opp[of];
 					}
 
-					// Shift dates forward (Maintained logic to move dates to future years)
+					// Force cloned opportunities to be 1 Year long. 
+					// This guarantees that if a user closes a cloned opp, the plugin aborts early and prevents an infinite loop.
+					newOpp["new_pitchedcontractlength"] = new OptionSetValue(100000000);
+
+					// Shift dates forward 
 					if (opp.Contains("new_pitchdate"))
 						newOpp["new_pitchdate"] = opp.GetAttributeValue<DateTime>("new_pitchdate").AddYears(i - 1);
 					if (opp.Contains("estimatedclosedate"))
@@ -139,8 +176,8 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 						newDeal["new_name"] = baseDeal.GetAttributeValue<string>("new_name").Replace(startYear.ToString(), targetYear.ToString());
 
 					newDeal["new_season"] = targetSeason.ToEntityReference();
-					newDeal["new_originatingopportunity"] = opp.ToEntityReference(); // Master Sale
-					newDeal["new_opportunity"] = new EntityReference("opportunity", newOppId); // Management Sale (New Opp)
+					newDeal["new_originatingopportunity"] = opp.ToEntityReference();
+					newDeal["new_opportunity"] = new EntityReference("opportunity", newOppId);
 
 					// Copy Deal Status, Type, and personnel
 					string[] dealFieldsToCopy = { "new_accountid", "new_dealstatus", "new_dealtype", "new_partnershipassigneeemail", "new_salesperson", "new_serviceperson" };
@@ -163,14 +200,12 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 						if (line.Contains("new_name"))
 							newLine["new_name"] = line.GetAttributeValue<string>("new_name").Replace(startYear.ToString(), targetYear.ToString());
 
-						// new_ratecard to the fields to copy directly
 						string[] lineFieldsToCopy = { "new_inventory", "new_quantity", "new_discount", "new_notes", "new_ratecard" };
 						foreach (string lf in lineFieldsToCopy)
 						{
 							if (line.Contains(lf)) newLine[lf] = line[lf];
 						}
 
-						// Set the season on the Deal Line to the FUTURE season being created, not the old one
 						if (line.Contains("new_seasonid"))
 						{
 							newLine["new_seasonid"] = targetSeason.ToEntityReference();
