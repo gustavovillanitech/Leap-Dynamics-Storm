@@ -599,18 +599,22 @@ OpportunityFormCP.setRequiredFieldsCP = function (executionContext) {
             baseFields.forEach(function(f) { setReq(f, "required"); });
 
             // 2. CONDITIONAL FIELDS (Clear them first to prevent them from getting stuck if the user moves back a stage)
+            // ADDED "new_escalator" so it resets if contract length is changed back to 1 year
             var conditionalFields = [
                 "parentcontactid", "campaignid", "budgetstatus", "new_pitchtype", "new_pitchdate",
-                "new_pitchedcontractlength", "new_confidencelevel", "estimatedclosedate", "estimatedvalue"
+                "new_pitchedcontractlength", "new_confidencelevel", "estimatedclosedate", "estimatedvalue",
+                "new_escalator" 
             ];
             conditionalFields.forEach(function(f) { setReq(f, "none"); });
 
             // 3. GET CURRENT VALUES
             var oppTypeAttr = formContext.getAttribute("new_opportunitytype");
             var stageAttr = formContext.getAttribute("new_salesstage");
+            var contractLengthAttr = formContext.getAttribute("new_pitchedcontractlength"); // Added Contract Length
             
             var oppType = oppTypeAttr ? oppTypeAttr.getValue() : null;
             var stage = stageAttr ? stageAttr.getValue() : null;
+            var contractLength = contractLengthAttr ? contractLengthAttr.getValue() : null;
 
             // 4. MATRIX LOGIC
             
@@ -662,6 +666,14 @@ OpportunityFormCP.setRequiredFieldsCP = function (executionContext) {
                         setReq("estimatedclosedate", "required");
                         setReq("estimatedvalue", "required");
                     }
+                }
+            }
+
+            // 5. ESCALATOR LOGIC (Multi-Year Deals)
+            // If Stage is Closed (100000003 for Prospect, 100000017 for Current) AND Contract Length > 1 year
+            if (stage === 100000003 || stage === 100000017) {
+                if (contractLength !== null && contractLength > 100000000) {
+                    setReq("new_escalator", "required");
                 }
             }
         }

@@ -96,10 +96,17 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 				dealQuery.Criteria.AddCondition("new_opportunity", ConditionOperator.Equal, opp.Id);
 				Entity baseDeal = service.RetrieveMultiple(dealQuery).Entities.FirstOrDefault();
 
-				if (baseDeal == null || !baseDeal.Contains("new_season"))
+				// Validation rule to prevent closing without a Deal
+				if (baseDeal == null)
 				{
-					tracingService.Trace("ABORT: No Base Deal found or Deal lacks a Season.");
-					return;
+					// Throwing this exception stops the save process and shows a popup error to the user.
+					throw new InvalidPluginExecutionException("Validation Error: You cannot close a Multi-Year Opportunity (Contract Length > 1) as Won without at least one associated Deal.");
+				}
+
+				if (!baseDeal.Contains("new_season"))
+				{
+					// Also preventing save if the Deal exists but lacks a season, since math depends on it.
+					throw new InvalidPluginExecutionException("Validation Error: The associated Deal is missing a 'Season'. A Season is required to accurately clone future Multi-Year Deals.");
 				}
 
 				// 3. Season Math
@@ -215,7 +222,11 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 						if (line.Contains("new_rate"))
 						{
 							decimal baseValue = ((Money)line["new_rate"]).Value;
-							decimal escalatedValue = Math.Round(baseValue * currentMultiplier, 2);
+
+							// Rounding to the nearest whole dollar amount (0 decimal places).
+							// MidpointRounding.AwayFromZero ensures standard commercial rounding (e.g., .5 rounds up to the next dollar).
+							decimal escalatedValue = Math.Round(baseValue * currentMultiplier, 0, MidpointRounding.AwayFromZero);
+
 							newLine["new_rate"] = new Money(escalatedValue);
 						}
 
@@ -227,6 +238,11 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 			catch (Exception ex)
 			{
 				tracingService.Trace($"EXCEPTION: {ex.Message}");
+				// Si lanzamos la excepcion original de arriba, queremos que el usuario la lea limpia, sin el "Error generating..." extra.
+				if (ex is InvalidPluginExecutionException)
+				{
+					throw;
+				}
 				throw new InvalidPluginExecutionException($"Error generating future deals: {ex.Message}");
 			}
 		}
