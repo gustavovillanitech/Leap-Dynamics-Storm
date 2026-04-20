@@ -16,7 +16,7 @@ namespace Pl.Deal.SetName
 			// Validate that we are working with the new_deal entity and that a Target exists
 			if (context.InputParameters.Contains("Target") && context.InputParameters["Target"] is Entity target)
 			{
-				if (target.LogicalName != "new_deal") return;
+				if (target.LogicalName != "new_deals") return;
 
 				// 1. Check if the user/JS explicitly sent a custom name in this transaction
 				bool hasCustomName = target.Contains("new_name") && !string.IsNullOrWhiteSpace(target.GetAttributeValue<string>("new_name"));

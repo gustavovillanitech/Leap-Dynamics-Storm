@@ -109,6 +109,13 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 					throw new InvalidPluginExecutionException("Validation Error: The associated Deal is missing a 'Season'. A Season is required to accurately clone future Multi-Year Deals.");
 				}
 
+				tracingService.Trace($"Marking base Deal with sequence=1 and totalYears={totalYears}");
+				Entity baseDealUpdate = new Entity("new_deals", baseDeal.Id);
+				baseDealUpdate["new_contractyearsequence"] = 1;
+				baseDealUpdate["new_totalcontractyears"] = totalYears;
+				service.Update(baseDealUpdate);
+				tracingService.Trace("Base Deal updated with multi-year tracking fields.");
+
 				// 3. Season Math
 				EntityReference baseSeasonRef = baseDeal.GetAttributeValue<EntityReference>("new_season");
 				Entity baseSeason = service.Retrieve("new_season", baseSeasonRef.Id, new ColumnSet("new_name", "new_seasonyear"));
@@ -184,6 +191,8 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 
 					newDeal["new_season"] = targetSeason.ToEntityReference();
 					newDeal["new_originatingopportunity"] = opp.ToEntityReference();
+					newDeal["new_contractyearsequence"] = i;
+					newDeal["new_totalcontractyears"] = totalYears;
 					newDeal["new_opportunity"] = new EntityReference("opportunity", newOppId);
 
 					// Copy Deal Status, Type, and personnel

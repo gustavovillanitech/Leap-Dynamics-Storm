@@ -13,6 +13,7 @@
   </Folder>
   <Folder Name="/Plugins/">
     <Project Path="Plugins/Pl.ActivityPointer.SyncTicketingStageFromOpportunity/Pl.ActivityPointer.SyncTicketingStageFromOpportunity.csproj" Id="ee2a3933-8ed6-4da3-8c23-f656ba98a075" />
+    <Project Path="Plugins/Pl.Deal.DealOptionAutomation/Pl.Deal.OptionAutomation.csproj" Id="d273ce37-67ce-4b74-87a4-bac9854ed64c" />
     <Project Path="Plugins/Pl.Deal.SetName/Pl.Deal.SetName.csproj" Id="19a50403-e93a-4d5b-9008-accf876c5b15" />
     <Project Path="Plugins/Pl.DealLines.InventoryManagement/Pl.DealLines.InventoryManagement.csproj" Id="391cea0f-cc65-46cf-a8a8-6e502c228db5" />
     <Project Path="Plugins/Pl.Email.SuppressInternalEmployeeEmailTracking/Pl.Email.SuppressInternalEmployeeEmailTracking.csproj" Id="3dc58efd-7312-41c5-92c1-8fa4f2fc671b" />

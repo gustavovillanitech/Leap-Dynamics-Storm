@@ -26,8 +26,8 @@ public class AppConfig
         var appConfig = new AppConfig
         {
             CrmBaseUrl  = config["CrmBaseUrl"]  ?? throw new Exception("CrmBaseUrl missing in appsettings.json"),
-            CsvFilePath = config["CsvFilePath"] ?? "traksoftware_deal_lines_2026_all_deals.csv",
-            LogFilePath = config["LogFilePath"] ?? "import_log.csv"
+            CsvFilePath = config["CsvFilePath"] ?? "traksoftware_deal_lines_2026_all_dealsv2.csv",
+            LogFilePath = config["LogFilePath"] ?? "import_logv2.csv"
         };
 
         var sets = config.GetSection("EntitySets");

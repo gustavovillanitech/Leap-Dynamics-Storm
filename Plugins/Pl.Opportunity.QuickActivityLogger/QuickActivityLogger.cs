@@ -30,7 +30,7 @@ namespace Pl.Opportunity.QuickActivityLogger
 				{
 					tracingService.Trace("Retrieving Opportunity details for ID: {0}", targetOpp.Id);
 					Entity fullOpp = service.Retrieve("opportunity", targetOpp.Id,
-						new ColumnSet("parentcontactid", "new_ticketingstage", "name"));
+						new ColumnSet("parentcontactid", "name"));
 
 					OptionSetValue activityType = targetOpp.GetAttributeValue<OptionSetValue>("new_activitytype");
 					string details = targetOpp.GetAttributeValue<string>("new_activitydetail");
@@ -109,11 +109,18 @@ namespace Pl.Opportunity.QuickActivityLogger
 						activity["scheduledend"] = dueDate;
 						activity["ownerid"] = new EntityReference("systemuser", context.InitiatingUserId);
 
-						if (activityLogicalName == "email" && fullOpp.Contains("parentcontactid"))
+						// Automatic To and From mapping for Email and Phone Call
+						if ((activityLogicalName == "email" || activityLogicalName == "phonecall") && fullOpp.Contains("parentcontactid"))
 						{
-							Entity party = new Entity("activityparty");
-							party["partyid"] = fullOpp.GetAttributeValue<EntityReference>("parentcontactid");
-							activity["to"] = new EntityCollection(new[] { party });
+							// 1. Set "To" (Recipient = Opportunity's Primary Contact)
+							Entity partyTo = new Entity("activityparty");
+							partyTo["partyid"] = fullOpp.GetAttributeValue<EntityReference>("parentcontactid");
+							activity["to"] = new EntityCollection(new[] { partyTo });
+
+							// 2. Set "From" (Sender = Current user executing the plugin)
+							Entity partyFrom = new Entity("activityparty");
+							partyFrom["partyid"] = new EntityReference("systemuser", context.InitiatingUserId);
+							activity["from"] = new EntityCollection(new[] { partyFrom });
 						}
 
 						Guid activityId = service.Create(activity);
