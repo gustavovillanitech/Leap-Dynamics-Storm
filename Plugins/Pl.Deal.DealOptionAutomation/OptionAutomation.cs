@@ -101,7 +101,6 @@ namespace Pl.Deal.OptionAutomation
 			int decisionValue = decision.Value;
 			tracing.Trace($"Deal Option Decision changed to: {decisionValue}");
 
-			// If decision is NOT Opted-In (client or mutual), close as Lost
 			bool isOptedIn = (decisionValue == DECISION_CLIENT_OPTED_IN ||
 							 decisionValue == DECISION_MUTUAL_OPTED_IN);
 
@@ -111,21 +110,25 @@ namespace Pl.Deal.OptionAutomation
 				return;
 			}
 
-			// Get current deal's sequence and opportunity for cascade logic
+			// Retrieve the current deal to get sequence, opp, name, and existing notes
 			Entity currentDeal = service.Retrieve("new_deals", target.Id,
-				new ColumnSet("new_contractyearsequence", "new_originatingopportunity", "new_dealstatus"));
+				new ColumnSet("new_contractyearsequence", "new_originatingopportunity",
+							  "new_dealstatus", "new_name", "new_dealoptionnotes"));
 
-			// Close THIS deal as Lost
-			CloseDealAsLost(target.Id, service, tracing);
+			string sourceDealName = currentDeal.GetAttributeValue<string>("new_name") ?? "Unknown Deal";
+			int? sourceSeq = currentDeal.GetAttributeValue<int?>("new_contractyearsequence");
+			string sourceNotes = currentDeal.GetAttributeValue<string>("new_dealoptionnotes");
 
-			// Cascade: close future years
-			int? currentSeq = currentDeal.GetAttributeValue<int?>("new_contractyearsequence");
+			// Close THIS deal as Lost (no cascade prefix on its own notes — it WAS the decision)
+			CloseDealAsLost(target.Id, service, tracing, null);
+
+			// Cascade: close future years WITH the source deal's context
 			EntityReference originatingOpp = currentDeal.GetAttributeValue<EntityReference>("new_originatingopportunity");
 
-			if (currentSeq.HasValue && originatingOpp != null)
+			if (sourceSeq.HasValue && originatingOpp != null)
 			{
-				tracing.Trace($"Cascading. Current sequence: {currentSeq}, Opp: {originatingOpp.Id}");
-				CascadeCloseFutureYears(originatingOpp.Id, currentSeq.Value, target.Id, service, tracing);
+				tracing.Trace($"Cascading from '{sourceDealName}' (seq {sourceSeq}). Opp: {originatingOpp.Id}");
+				CascadeCloseFutureYears(originatingOpp.Id, sourceSeq.Value, target.Id, sourceDealName, sourceSeq.Value, sourceNotes, service, tracing);
 			}
 			else
 			{
@@ -133,30 +136,45 @@ namespace Pl.Deal.OptionAutomation
 			}
 		}
 
-		private void CascadeCloseFutureYears(Guid originatingOppId, int currentSequence, Guid currentDealId, IOrganizationService service, ITracingService tracing)
+		private void CascadeCloseFutureYears(Guid originatingOppId, int currentSequence, Guid currentDealId,
+			string sourceDealName, int sourceSeq, string sourceNotes,
+			IOrganizationService service, ITracingService tracing)
 		{
 			QueryExpression q = new QueryExpression("new_deals")
 			{
-				ColumnSet = new ColumnSet("new_dealsid", "new_contractyearsequence", "statecode")
+				ColumnSet = new ColumnSet("new_dealsid", "new_contractyearsequence", "statecode", "new_dealoptionnotes")
 			};
 			q.Criteria.AddCondition("new_originatingopportunity", ConditionOperator.Equal, originatingOppId);
 			q.Criteria.AddCondition("new_contractyearsequence", ConditionOperator.GreaterThan, currentSequence);
-			q.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0); // Active only
+			q.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0);
 			q.Criteria.AddCondition("new_dealsid", ConditionOperator.NotEqual, currentDealId);
 
 			EntityCollection futureDeals = service.RetrieveMultiple(q);
 			tracing.Trace($"Found {futureDeals.Entities.Count} future-year deals to cascade-close.");
 
+			// Build the prefix ONCE for all cascaded deals
+			string cascadePrefix = $"[Cascade-closed from Deal {sourceDealName} sequence {sourceSeq}]";
+
 			foreach (Entity futureDeal in futureDeals.Entities)
 			{
 				tracing.Trace($"Cascade-closing deal {futureDeal.Id} as Lost.");
-				CloseDealAsLost(futureDeal.Id, service, tracing);
+
+				// Preserve any existing notes on the future deal, prepend the cascade prefix
+				string existingNotes = futureDeal.GetAttributeValue<string>("new_dealoptionnotes") ?? "";
+				string combinedNotes = string.IsNullOrWhiteSpace(existingNotes)
+					? cascadePrefix + (string.IsNullOrWhiteSpace(sourceNotes) ? "" : " " + sourceNotes)
+					: cascadePrefix + " " + existingNotes;
+
+				// Trim to max length of the field (2000 chars per schema)
+				if (combinedNotes.Length > 2000)
+					combinedNotes = combinedNotes.Substring(0, 2000);
+
+				CloseDealAsLost(futureDeal.Id, service, tracing, combinedNotes);
 			}
 		}
 
-		private void CloseDealAsLost(Guid dealId, IOrganizationService service, ITracingService tracing)
+		private void CloseDealAsLost(Guid dealId, IOrganizationService service, ITracingService tracing, string notesToSet)
 		{
-			// Retrieve the "Closed Lost" lookup record
 			Guid? closedLostId = GetDealStatusIdByCode(STATUS_CLOSED_LOST, service, tracing);
 			if (!closedLostId.HasValue)
 			{
@@ -165,8 +183,15 @@ namespace Pl.Deal.OptionAutomation
 
 			Entity update = new Entity("new_deals", dealId);
 			update["new_dealstatus"] = new EntityReference("new_dealstatus", closedLostId.Value);
+
+			// If notes were passed (cascade scenario), update them too
+			if (!string.IsNullOrWhiteSpace(notesToSet))
+			{
+				update["new_dealoptionnotes"] = notesToSet;
+			}
+
 			service.Update(update);
-			tracing.Trace($"Deal {dealId} updated to Closed Lost.");
+			tracing.Trace($"Deal {dealId} updated to Closed Lost" + (notesToSet != null ? " with cascade notes." : "."));
 		}
 
 		private Guid? GetDealStatusIdByCode(string code, IOrganizationService service, ITracingService tracing)
@@ -203,7 +228,7 @@ namespace Pl.Deal.OptionAutomation
 			if (playoffDeal != null)
 			{
 				tracing.Trace($"Found Playoff Deal {playoffDeal.Id}. Closing as Lost.");
-				CloseDealAsLost(playoffDeal.Id, service, tracing);
+				CloseDealAsLost(playoffDeal.Id, service, tracing, null);
 			}
 			else
 			{

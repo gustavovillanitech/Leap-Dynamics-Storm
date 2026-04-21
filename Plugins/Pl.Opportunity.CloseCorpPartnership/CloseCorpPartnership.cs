@@ -85,6 +85,8 @@ namespace Pl.Opportunity.CloseCorpPartnership
 
 						service.Execute(winReq);
 						tracingService.Trace("SUCCESS: Opportunity closed as WON.");
+						tracingService.Trace("Proceeding to close associated Deals as Won...");
+						CloseAssociatedDealsAsWon(target.Id, service, tracingService);
 						break;
 
 					// LOST SCENARIOS: 11 - Declined - Prospect OR 11 - Declined - Current
@@ -118,6 +120,53 @@ namespace Pl.Opportunity.CloseCorpPartnership
 				// This throw is crucial! It will perform the rollback and show the error on the user's screen.
 				throw new InvalidPluginExecutionException($"Error processing Opportunity Close based on Sales Stage: {ex.Message}");
 			}
+		}
+		private void CloseAssociatedDealsAsWon(Guid opportunityId, IOrganizationService service, ITracingService tracing)
+		{
+			// Retrieve the "Closed Won" status record (DS-1008)
+			Guid? closedWonId = GetDealStatusIdByCode("DS-1008", service, tracing);
+			if (!closedWonId.HasValue)
+			{
+				tracing.Trace("WARNING: Could not find Deal Status DS-1008. Skipping Deal status update.");
+				return;
+			}
+
+			// Query all active Deals of this Opportunity that are NOT Playoff Deals
+			// (new_regularseasondeal is null means it's a regular Deal, not a Playoff)
+			QueryExpression q = new QueryExpression("new_deals")
+			{
+				ColumnSet = new ColumnSet("new_dealsid", "new_name")
+			};
+			q.Criteria.AddCondition("new_opportunity", ConditionOperator.Equal, opportunityId);
+			q.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0); // Active only
+			q.Criteria.AddCondition("new_regularseasondeal", ConditionOperator.Null); // NOT a Playoff Deal
+
+			EntityCollection deals = service.RetrieveMultiple(q);
+			tracing.Trace($"Found {deals.Entities.Count} active regular Deals to close as Won.");
+
+			foreach (Entity deal in deals.Entities)
+			{
+				string name = deal.GetAttributeValue<string>("new_name") ?? "Unknown";
+				tracing.Trace($"Closing Deal '{name}' ({deal.Id}) as Won.");
+
+				Entity update = new Entity("new_deals", deal.Id);
+				update["new_dealstatus"] = new EntityReference("new_dealstatus", closedWonId.Value);
+				service.Update(update);
+			}
+		}
+
+		private Guid? GetDealStatusIdByCode(string code, IOrganizationService service, ITracingService tracing)
+		{
+			QueryExpression q = new QueryExpression("new_dealstatus") { ColumnSet = new ColumnSet("new_dealstatusid") };
+			q.Criteria.AddCondition("new_code", ConditionOperator.Equal, code);
+			q.TopCount = 1;
+			var results = service.RetrieveMultiple(q);
+			if (results.Entities.Count == 0)
+			{
+				tracing.Trace($"No Deal Status found with code '{code}'.");
+				return null;
+			}
+			return results.Entities[0].Id;
 		}
 	}
 }

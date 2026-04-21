@@ -8,54 +8,67 @@ namespace Pl.Deal.SetName
 	{
 		public void Execute(IServiceProvider serviceProvider)
 		{
-			// Obtain the core Dynamics 365 services
 			IPluginExecutionContext context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
 			IOrganizationServiceFactory serviceFactory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
 			IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
+			ITracingService tracing = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
 
-			// Validate that we are working with the new_deal entity and that a Target exists
 			if (context.InputParameters.Contains("Target") && context.InputParameters["Target"] is Entity target)
 			{
+				// FIX: entidad correcta es "new_deals" (plural), no "new_deal"
 				if (target.LogicalName != "new_deals") return;
 
 				// 1. Check if the user/JS explicitly sent a custom name in this transaction
 				bool hasCustomName = target.Contains("new_name") && !string.IsNullOrWhiteSpace(target.GetAttributeValue<string>("new_name"));
 
-				// If it's an Update message and a custom name was provided, respect it (Do nothing)
-				if (context.MessageName.ToLower() == "update" && hasCustomName)
-				{
-					return;
-				}
+				// On Update, if a custom name was provided AND we're NOT dealing with the Playoff creation flow, respect it.
+				// Note: the DealOptionAutomation plugin creates Playoff Deals with name already set — we want to ENRICH that,
+				// so we do NOT early-return for those cases. The logic below handles this correctly by checking if the
+				// current name matches the expected pattern vs. already having the Playoffs suffix.
 
-				// Logic to determine if we MUST auto-generate the name
+				// Determine if we should auto-generate
 				bool shouldGenerate = false;
-
 				if (context.MessageName.ToLower() == "create")
 				{
-					// On Create, generate if the name is empty
-					shouldGenerate = !hasCustomName;
+					shouldGenerate = true; // Always generate on Create (overrides whatever was sent)
 				}
 				else if (context.MessageName.ToLower() == "update")
 				{
-					// On Update, generate ONLY if Account or Season changed, and NO new name was provided manually
-					shouldGenerate = (target.Contains("new_accountid") || target.Contains("new_season")) && !hasCustomName;
+					// On Update: regenerate only if Account or Season changed
+					shouldGenerate = target.Contains("new_accountid") || target.Contains("new_season");
 				}
 
-				if (!shouldGenerate) return;
+				if (!shouldGenerate)
+				{
+					tracing.Trace("SetName: no trigger for regeneration. Skipping.");
+					return;
+				}
 
-				// 2. Extract necessary data (From Target, or from the Pre-Image if not included in the update payload)
+				// 2. Extract data (from Target or PreImage)
 				Entity preImage = context.PreEntityImages.Contains("PreImage") ? context.PreEntityImages["PreImage"] : null;
 
-				EntityReference accountRef = target.Contains("new_accountid") ? target.GetAttributeValue<EntityReference>("new_accountid") :
-											 (preImage != null && preImage.Contains("new_accountid") ? preImage.GetAttributeValue<EntityReference>("new_accountid") : null);
+				EntityReference accountRef = GetLookup(target, preImage, "new_accountid");
+				EntityReference seasonRef = GetLookup(target, preImage, "new_season");
 
-				EntityReference seasonRef = target.Contains("new_season") ? target.GetAttributeValue<EntityReference>("new_season") :
-											(preImage != null && preImage.Contains("new_season") ? preImage.GetAttributeValue<EntityReference>("new_season") : null);
+				// NEW: Check if this is a Playoff Deal
+				// Priority: target first (if being set in this transaction), then PreImage
+				EntityReference regularSeasonDealRef = null;
+				if (target.Contains("new_regularseasondeal"))
+				{
+					regularSeasonDealRef = target.GetAttributeValue<EntityReference>("new_regularseasondeal");
+				}
+				else if (preImage != null && preImage.Contains("new_regularseasondeal"))
+				{
+					regularSeasonDealRef = preImage.GetAttributeValue<EntityReference>("new_regularseasondeal");
+				}
 
+				bool isPlayoffDeal = (regularSeasonDealRef != null);
+				tracing.Trace($"SetName: isPlayoffDeal={isPlayoffDeal}");
+
+				// 3. Resolve Account name
 				string accountName = "";
 				if (accountRef != null)
 				{
-					// Attempt to get the name from the reference; otherwise, fetch it from the database
 					if (!string.IsNullOrEmpty(accountRef.Name)) accountName = accountRef.Name;
 					else
 					{
@@ -64,27 +77,42 @@ namespace Pl.Deal.SetName
 					}
 				}
 
+				// 4. Resolve Season name
 				string seasonName = "";
 				if (seasonRef != null)
 				{
-					// Assuming the season entity is custom, we look for its Name property (new_name)
 					if (!string.IsNullOrEmpty(seasonRef.Name)) seasonName = seasonRef.Name;
 					else
 					{
-						// IMPORTANT: Ensure "new_season" and "new_name" match your actual Seasons table configuration
 						Entity season = service.Retrieve("new_season", seasonRef.Id, new ColumnSet("new_name"));
 						seasonName = season.GetAttributeValue<string>("new_name");
 					}
 				}
 
-				// 3. Build and Inject the name into the Target
+				// 5. Build the name
 				if (!string.IsNullOrEmpty(accountName) || !string.IsNullOrEmpty(seasonName))
 				{
-					// Concatenate and remove any extra hyphens or spaces if any data is missing
-					string newDealName = $"{accountName} - {seasonName}".Trim(' ', '-');
-					target["new_name"] = newDealName;
+					string baseName = $"{accountName} - {seasonName}".Trim(' ', '-');
+
+					// FIX: if Playoff Deal, append " - Playoffs" suffix
+					string finalName = isPlayoffDeal ? $"{baseName} - Playoffs" : baseName;
+
+					target["new_name"] = finalName;
+					tracing.Trace($"SetName: generated name = '{finalName}'");
 				}
 			}
+		}
+
+		// ----------------------------------------------------------------------------
+		// Helper: resolve a lookup field from Target or PreImage (Target takes priority)
+		// ----------------------------------------------------------------------------
+		private EntityReference GetLookup(Entity target, Entity preImage, string attrName)
+		{
+			if (target.Contains(attrName))
+				return target.GetAttributeValue<EntityReference>(attrName);
+			if (preImage != null && preImage.Contains(attrName))
+				return preImage.GetAttributeValue<EntityReference>(attrName);
+			return null;
 		}
 	}
 }

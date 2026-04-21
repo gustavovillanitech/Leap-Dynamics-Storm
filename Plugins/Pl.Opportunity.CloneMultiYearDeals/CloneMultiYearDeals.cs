@@ -196,10 +196,23 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 					newDeal["new_opportunity"] = new EntityReference("opportunity", newOppId);
 
 					// Copy Deal Status, Type, and personnel
-					string[] dealFieldsToCopy = { "new_accountid", "new_dealstatus", "new_dealtype", "new_partnershipassigneeemail", "new_salesperson", "new_serviceperson" };
+					string[] dealFieldsToCopy = { "new_accountid", "new_dealtype",
+							  "new_partnershipassigneeemail", "new_salesperson",
+							  "new_serviceperson" }; 
 					foreach (string df in dealFieldsToCopy)
 					{
 						if (baseDeal.Contains(df)) newDeal[df] = baseDeal[df];
+					}
+
+					Guid? openStatusId = GetDealStatusIdByCode("DS-1001", service, tracingService);
+					if (openStatusId.HasValue)
+					{
+						newDeal["new_dealstatus"] = new EntityReference("new_dealstatus", openStatusId.Value);
+						tracingService.Trace($"Cloned Deal for year {targetYear} will start in Open (DS-1001).");
+					}
+					else
+					{
+						tracingService.Trace($"WARNING: Could not find Deal Status DS-1001. Cloned Deal will have NULL status.");
 					}
 
 					// Evaluate Risk
@@ -254,6 +267,20 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 				}
 				throw new InvalidPluginExecutionException($"Error generating future deals: {ex.Message}");
 			}
+		}
+
+		private Guid? GetDealStatusIdByCode(string code, IOrganizationService service, ITracingService tracing)
+		{
+			QueryExpression q = new QueryExpression("new_dealstatus") { ColumnSet = new ColumnSet("new_dealstatusid") };
+			q.Criteria.AddCondition("new_code", ConditionOperator.Equal, code);
+			q.TopCount = 1;
+			var results = service.RetrieveMultiple(q);
+			if (results.Entities.Count == 0)
+			{
+				tracing.Trace($"No Deal Status found with code '{code}'.");
+				return null;
+			}
+			return results.Entities[0].Id;
 		}
 	}
 }
