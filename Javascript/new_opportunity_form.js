@@ -101,6 +101,7 @@ OpportunityFormCP.onLoad = function(executionContext) {
 OpportunityForm.onControllingFieldChange = function(executionContext) {
     var formContext = executionContext.getFormContext();
     OpportunityForm.applyFilters(formContext);
+    OpportunityForm.setRequiredFields(formContext);
 };
 
 OpportunityFormCP.onControllingFieldChange = function(executionContext) {
@@ -207,8 +208,9 @@ OpportunityForm.setRequiredFields = function(formContext) {
     var prodTypeAttr = formContext.getAttribute("new_producttype");
     var stageAttr = formContext.getAttribute("new_ticketingstage");
     var detailAttr = formContext.getAttribute("new_producttypedetail");
+    var reasonForBuyingAttr = formContext.getAttribute("new_reasonforbuying");
 
-    if (!oppTypeAttr || !prodTypeAttr || !stageAttr || !detailAttr) return;
+    if (!oppTypeAttr || !prodTypeAttr || !stageAttr || !detailAttr || !reasonForBuyingAttr) return;
 
     var oppType = oppTypeAttr.getValue();
     var prodType = prodTypeAttr.getValue();
@@ -243,6 +245,26 @@ OpportunityForm.setRequiredFields = function(formContext) {
         }
     }
 
+    // RULE 4: Ticketing - Premium Service and stages is  = 2 - Premium Pitched or over and different to stage = Lost (Pending for definition)
+    /**if (!isRequired && oppType === 100000002 && prodType === 100000012) {
+        var stagesR3 = [100000011, 100000012, 100000013, 100000005];
+        if (stagesR3.indexOf(stage) > -1) {
+            isRequired = true;
+        }
+    }**/
+
+    // RULE 5: Opp type = Ticketing Groups, product type = groups and stage = closed won
+    // Valores numéricos: 
+    // oppType 100000001 = Ticketing - Groups
+    // prodType 100000001 = Groups
+    // stage 100000005 = Closed Won (Asegúrate de que este sea el ID correcto en tu sistema para Closed Won)
+    if (oppType === 100000001 && prodType === 100000001 && stage === 100000005) {
+        reasonForBuyingAttr.setRequiredLevel("required");
+    } 
+    else {
+        reasonForBuyingAttr.setRequiredLevel("none");
+    }
+
     detailAttr.setRequiredLevel(isRequired ? "required" : "none");
 };
 
@@ -259,7 +281,7 @@ OpportunityForm.filterProductDetail = function(formContext) {
         100000008: [100000000, 100000001, 100000002], 
         100000001: [100000003, 100000004, 100000005], 
         100000012: [100000006, 100000008, 100000009, 100000011, 100000012, 100000020, 100000021, 100000022, 100000023, 100000024, 100000025], //new_producttype = Premium Hospitality
-        100000010: [100000013, 100000014, 100000015, 100000016, 100000017], 
+        100000010: [100000013, 100000014, 100000015, 100000016, 100000017, 100000026], //FSE - Partial Plans
         100000011: [100000018, 100000019] 
     };
     
