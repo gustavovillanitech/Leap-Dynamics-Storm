@@ -207,67 +207,96 @@ OpportunityForm.setRequiredFields = function(formContext) {
     var oppTypeAttr = formContext.getAttribute("new_opportunitytype");
     var prodTypeAttr = formContext.getAttribute("new_producttype");
     var stageAttr = formContext.getAttribute("new_ticketingstage");
-    var detailAttr = formContext.getAttribute("new_producttypedetail");
-    var reasonForBuyingAttr = formContext.getAttribute("new_reasonforbuying");
+    var prevCallAttr = formContext.getAttribute("new_previousphonecallguid");
 
-    if (!oppTypeAttr || !prodTypeAttr || !stageAttr || !detailAttr || !reasonForBuyingAttr) return;
+    // Validate core attributes needed for decision making
+    if (!oppTypeAttr || !prodTypeAttr || !stageAttr) return;
 
     var oppType = oppTypeAttr.getValue();
     var prodType = prodTypeAttr.getValue();
     var stage = stageAttr.getValue();
-    var isRequired = false;
+    var prevCall = prevCallAttr ? prevCallAttr.getValue() : null;
 
-    // RULE 1: Ticketing - New FSE (100000000)
-    // Mandatory ONLY when Product is Deposit (100000008)
-    // Partial (100000010) and Flex (100000011) removed per request
-    if (oppType === 100000000) {
-        var prodTypesR1 = [100000008]; 
-        var stagesR1 = [100000003, 100000004, 100000005];
-        
-        if (prodTypesR1.indexOf(prodType) > -1 && stagesR1.indexOf(stage) > -1) {
-            isRequired = true;
+    // ---------------------------------------------------------
+    // RULES FOR: 'Product Type Detail' (new_producttypedetail)
+    // ---------------------------------------------------------
+    var detailAttr = formContext.getAttribute("new_producttypedetail");
+    if (detailAttr) {
+        var isDetailRequired = false;
+
+        // RULE 1: Ticketing - New FSE (100000000)
+        if (oppType === 100000000) {
+            var prodTypesR1 = [100000008]; 
+            var stagesR1 = [100000003, 100000004, 100000005];
+            if (prodTypesR1.indexOf(prodType) > -1 && stagesR1.indexOf(stage) > -1) {
+                isDetailRequired = true;
+            }
         }
+        // RULE 2: Ticketing - Groups (100000001)
+        if (!isDetailRequired && oppType === 100000001) {
+            var stagesR2 = [100000007, 100000005];
+            if (prodType === 100000001 && stagesR2.indexOf(stage) > -1) {
+                isDetailRequired = true;
+            }
+        }
+        // RULE 3: Ticketing - New FSE (100000000) + Premium Hospitality (100000012)
+        if (!isDetailRequired && oppType === 100000000 && prodType === 100000012) {
+            var stagesR3 = [100000011, 100000012, 100000013, 100000005];
+            if (stagesR3.indexOf(stage) > -1) {
+                isDetailRequired = true;
+            }
+        }
+
+        detailAttr.setRequiredLevel(isDetailRequired ? "required" : "none");
     }
 
-    // RULE 2: Ticketing - Groups (100000001)
-    if (!isRequired && oppType === 100000001) {
-        var stagesR2 = [100000007, 100000005];
-        if (prodType === 100000001 && stagesR2.indexOf(stage) > -1) {
-            isRequired = true;
+    // ---------------------------------------------------------
+    // RULES FOR: 'Section' (new_section)
+    // ---------------------------------------------------------
+    var sectionAttr = formContext.getAttribute("new_section");
+    if (sectionAttr) {
+        var isSectionRequired = false;
+
+        // RULE 4: Ticketing - Premium Sales (100000004)
+        // Stage "2-Premium Pitched" (100000011) and later
+        var premiumStages = [100000011, 100000012, 100000013, 100000005]; 
+        if (oppType === 100000004 && premiumStages.indexOf(stage) > -1) {
+            isSectionRequired = true;
         }
+
+        // RULE 6
+        // IF Opp Type is New FSE (100000000) or Service (100000002)
+        // AND Stage is Closed Won (100000005) or 11-Closed-Auto Renewed (100000029)
+        // AND Previous Phone Call GUID is empty
+        // AND Product Type is NOT FSE-Flexible Plans (100000011)
+        if (!isSectionRequired) {
+            var oppTypesBR = [100000000, 100000002];
+            var stagesBR = [100000005, 100000029];
+            var isPrevCallEmpty = (prevCall === null || prevCall === "");
+            
+            if (oppTypesBR.indexOf(oppType) > -1 && 
+                stagesBR.indexOf(stage) > -1 && 
+                isPrevCallEmpty && 
+                prodType !== 100000011) {
+                isSectionRequired = true;
+            }
+        }
+
+        sectionAttr.setRequiredLevel(isSectionRequired ? "required" : "none");
     }
 
-    // RULE 3: Ticketing - New FSE (100000000) + Premium Hospitality (100000012)
-    if (!isRequired && oppType === 100000000 && prodType === 100000012) {
-        var stagesR3 = [100000011, 100000012, 100000013, 100000005];
-        if (stagesR3.indexOf(stage) > -1) {
-            isRequired = true;
+    // ---------------------------------------------------------
+    // RULE 5 FOR: 'Reason for Buying' (new_reasonforbuying)
+    // ---------------------------------------------------------
+    var reasonForBuyingAttr = formContext.getAttribute("new_reasonforbuying");
+    if (reasonForBuyingAttr) {
+        if (oppType === 100000001 && prodType === 100000001 && stage === 100000005) {
+            reasonForBuyingAttr.setRequiredLevel("required");
+        } else {
+            reasonForBuyingAttr.setRequiredLevel("none");
         }
     }
-
-    // RULE 4: Ticketing - Premium Service and stages is  = 2 - Premium Pitched or over and different to stage = Lost (Pending for definition)
-    /**if (!isRequired && oppType === 100000002 && prodType === 100000012) {
-        var stagesR3 = [100000011, 100000012, 100000013, 100000005];
-        if (stagesR3.indexOf(stage) > -1) {
-            isRequired = true;
-        }
-    }**/
-
-    // RULE 5: Opp type = Ticketing Groups, product type = groups and stage = closed won
-    // Valores numéricos: 
-    // oppType 100000001 = Ticketing - Groups
-    // prodType 100000001 = Groups
-    // stage 100000005 = Closed Won (Asegúrate de que este sea el ID correcto en tu sistema para Closed Won)
-    if (oppType === 100000001 && prodType === 100000001 && stage === 100000005) {
-        reasonForBuyingAttr.setRequiredLevel("required");
-    } 
-    else {
-        reasonForBuyingAttr.setRequiredLevel("none");
-    }
-
-    detailAttr.setRequiredLevel(isRequired ? "required" : "none");
 };
-
 OpportunityForm.filterProductDetail = function(formContext) {
     var attr = formContext.getAttribute("new_producttype");
     var detAttr = formContext.getAttribute("new_producttypedetail");
