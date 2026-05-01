@@ -8,6 +8,7 @@ DealForm.onLoad = function (executionContext) {
     DealForm.setDealOptionRequirements(executionContext);
     DealForm.setPlayoffOptionRequirements(executionContext);
     DealForm.applyConditionalVisibility(executionContext);
+    DealForm.calculateMaxActivationSpend(executionContext);
 };
  
 DealForm.setDefaultAccountFromOpportunity = function (executionContext) {
@@ -118,45 +119,43 @@ DealForm.onVisibilityTriggerChange = function (executionContext) {
 };
  
 // --- Core Logic ---
- 
 DealForm.setDealOptionRequirements = function (executionContext) {
     var formContext = executionContext.getFormContext();
- 
+
     var setReq = function (field, level) {
         var a = formContext.getAttribute(field);
         if (a) a.setRequiredLevel(level);
     };
- 
     var setVisible = function (field, visible) {
         var c = formContext.getControl(field);
         if (c) c.setVisible(visible);
     };
- 
-    // Reset
+
+    // FIX 4-A: Deal Option Status is ALWAYS required (per Ray's table)
+    setReq("new_optouttype", "required");
+
+    // Reset conditional fields
     var conditionalFields = [
         "new_optoutdeadline", "new_optionnegotiationwindow",
         "new_optionnegotiationstartdate", "new_optionnegotiationdeadlinedate",
         "new_dealoptiondecision"
     ];
     conditionalFields.forEach(function (f) { setReq(f, "none"); });
- 
+
     var statusAttr = formContext.getAttribute("new_optouttype");
     if (!statusAttr) return;
     var status = statusAttr.getValue();
- 
-    // Optionset values: Opt-In=100000001, Opt-Out=100000002, No Option=100000000, Unknown=100000003
+
     var NO_OPTION = 100000000;
     var UNKNOWN = 100000003;
- 
+
     var isNoOptionOrUnknown = (status === NO_OPTION || status === UNKNOWN || status === null);
- 
+
     if (!isNoOptionOrUnknown) {
-        // Status is Opt-In or Opt-Out → require these fields
         setReq("new_optoutdeadline", "required");
         setReq("new_optionnegotiationwindow", "required");
         setReq("new_dealoptiondecision", "required");
- 
-        // Show the negotiation window dates only if window = Yes
+
         var windowAttr = formContext.getAttribute("new_optionnegotiationwindow");
         if (windowAttr && windowAttr.getValue() === true) {
             setReq("new_optionnegotiationstartdate", "required");
@@ -168,34 +167,45 @@ DealForm.setDealOptionRequirements = function (executionContext) {
             setVisible("new_optionnegotiationdeadlinedate", false);
         }
     } else {
-        // Hide date range fields entirely
         setVisible("new_optionnegotiationstartdate", false);
         setVisible("new_optionnegotiationdeadlinedate", false);
     }
-};
- 
+}; 
 DealForm.setPlayoffOptionRequirements = function (executionContext) {
     var formContext = executionContext.getFormContext();
- 
+
     var setReq = function (field, level) {
         var a = formContext.getAttribute(field);
         if (a) a.setRequiredLevel(level);
     };
- 
-    // Reset
+
+    // CRITICAL EARLY EXIT: if is = Playoff Deal, not apply required fields for Playoff
+    var regularSeasonAttr = formContext.getAttribute("new_regularseasondeal");
+    if (regularSeasonAttr && regularSeasonAttr.getValue() !== null) {
+        var playoffFields = [
+            "new_playoffoptionstatus", "new_playoffoptiondeadline",
+            "new_playoffoptiondecision"
+        ];
+        playoffFields.forEach(function (f) { setReq(f, "none"); });
+        return;
+    }
+
+    // Playoff Option Status is ALWAYS required for regular Deals
+    setReq("new_playoffoptionstatus", "required");
+
+    // Reset conditional playoff fields
     setReq("new_playoffoptiondeadline", "none");
     setReq("new_playoffoptiondecision", "none");
- 
+
     var statusAttr = formContext.getAttribute("new_playoffoptionstatus");
     if (!statusAttr) return;
     var status = statusAttr.getValue();
- 
-    // Values: Opt-In=100000000, Opt-Out=100000001, In=100000002, Out=100000003, Unknown=100000004
+
     var OUT = 100000003;
     var UNKNOWN = 100000004;
- 
+
     var needsRequired = (status !== null && status !== OUT && status !== UNKNOWN);
- 
+
     if (needsRequired) {
         setReq("new_playoffoptiondeadline", "required");
         setReq("new_playoffoptiondecision", "required");
@@ -276,4 +286,112 @@ DealForm.fixCanvasAppHeight = function (executionContext) {
             "{ height: 480px !important; max-height: 480px !important; overflow: hidden !important; }";
         mainDocument.head.appendChild(style);
     } catch (e) { console.error(e); }
+};
+
+/**
+ * OnSave validation. Block save if Deal is being closed as Won
+ * with Deal Option Status blank or Unknown.
+ * Provides immediate user feedback (UX), but the plugin guards against
+ * API / Power Automate / CloseCorpPartnership flow bypass.
+ */
+DealForm.onSaveValidateOptionStatusForWon = function (executionContext) {
+    var formContext = executionContext.getFormContext();
+
+    // Skip validation if this is a Playoff Deal (different lifecycle)
+    var regularSeasonAttr = formContext.getAttribute("new_regularseasondeal");
+    if (regularSeasonAttr && regularSeasonAttr.getValue() !== null) {
+        return;
+    }
+
+    var statusAttr = formContext.getAttribute("new_dealstatus");
+    var optionStatusAttr = formContext.getAttribute("new_optouttype");
+    if (!statusAttr || !optionStatusAttr) return;
+
+    var dealStatus = statusAttr.getValue();
+    if (!dealStatus || dealStatus.length === 0) return;
+
+    // Get the Deal Status name to detect "Closed Won"
+    // Note: dealStatus is an array of lookup references with format [{id, name, entityType}]
+    var statusName = dealStatus[0].name || "";
+
+    // Match by name pattern (more reliable than hardcoded GUIDs)
+    // Looks for "Closed Won" — could be "8 - Closed Won" or similar
+    var isClosingWon = /Closed\s*Won/i.test(statusName);
+    if (!isClosingWon) return;
+
+    var optionStatus = optionStatusAttr.getValue();
+    var UNKNOWN = 100000003;
+
+    if (optionStatus === null || optionStatus === UNKNOWN) {
+        // Block save with user-friendly message
+        var eventArgs = executionContext.getEventArgs();
+        eventArgs.preventDefault();
+
+        formContext.ui.setFormNotification(
+            "Cannot close this Deal as Won: 'Deal Option Status' must be set to Opt-In, Opt-Out, or No Option (not blank or Unknown).",
+            "ERROR",
+            "won_validation"
+        );
+    } else {
+        formContext.ui.clearFormNotification("won_validation");
+    }
+};
+
+/**
+ * Calculates and displays Max Activation Spend on the form.
+ * Reads the percentage from the Deal Configuration table (singleton, first record).
+ * Triggered onLoad and OnChange of new_total.
+ *
+ * NOTE: The plugin (InventoryManagement.RollupTotalsToParentDeal) is the
+ * authoritative source. This JS only mirrors the calculation in the UI for
+ * immediate visual feedback when the form is open and new_total changes.
+ *
+ * @param {object} executionContext
+ */
+DealForm.calculateMaxActivationSpend = function (executionContext) {
+    var formContext = executionContext.getFormContext();
+
+    var totalAttr = formContext.getAttribute("new_total");
+    var maxAttr = formContext.getAttribute("new_maxactivationspend");
+
+    if (!totalAttr || !maxAttr) {
+        console.warn("DealForm.calculateMaxActivationSpend: missing new_total or new_maxactivationspend on form.");
+        return;
+    }
+
+    var dealTotal = totalAttr.getValue() || 0;
+
+    if (dealTotal === 0) {
+        maxAttr.setValue(0);
+        return;
+    }
+
+    // Fetch the singleton config record
+    Xrm.WebApi.retrieveMultipleRecords(
+        "new_dealconfiguration",
+        "?$select=new_maxactivationspendpercent&$top=1"
+    ).then(
+        function success(result) {
+            if (!result.entities || result.entities.length === 0) {
+                console.warn("DealForm.calculateMaxActivationSpend: no Deal Configuration record found.");
+                maxAttr.setValue(null);
+                return;
+            }
+
+            var percent = result.entities[0].new_maxactivationspendpercent;
+            if (percent === null || percent === undefined) {
+                console.warn("DealForm.calculateMaxActivationSpend: new_maxactivationspendpercent is null in config.");
+                maxAttr.setValue(null);
+                return;
+            }
+
+            var maxSpend = Math.round((dealTotal * (percent / 100)) * 100) / 100;
+            maxAttr.setValue(maxSpend);
+
+            console.log("MaxActivationSpend (UI) -> Total: " + dealTotal + " × " + percent + "% = " + maxSpend);
+        },
+        function error(err) {
+            console.error("DealForm.calculateMaxActivationSpend: error fetching config: " + err.message);
+        }
+    );
 };

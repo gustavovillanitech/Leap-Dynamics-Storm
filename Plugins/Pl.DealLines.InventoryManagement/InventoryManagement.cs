@@ -121,14 +121,14 @@ namespace Pl.DealLines.InventoryManagement
 			tracingService.Trace($"Rolling up Net Totals to Parent Deal: {dealId}");
 
 			string fetchXml = $@"
-								<fetch aggregate='true'>
-									<entity name='new_deallines'>
-									<attribute name='new_total' alias='sum_total' aggregate='sum' />
-									<filter>
-										<condition attribute='new_dealid' operator='eq' value='{dealId}' />
-									</filter>
-									</entity>
-								</fetch>";
+                        <fetch aggregate='true'>
+                            <entity name='new_deallines'>
+                            <attribute name='new_total' alias='sum_total' aggregate='sum' />
+                            <filter>
+                                <condition attribute='new_dealid' operator='eq' value='{dealId}' />
+                            </filter>
+                            </entity>
+                        </fetch>";
 
 			EntityCollection result = service.RetrieveMultiple(new FetchExpression(fetchXml));
 			decimal netTotal = 0m;
@@ -137,16 +137,62 @@ namespace Pl.DealLines.InventoryManagement
 			{
 				AliasedValue aliasedTotal = (AliasedValue)result.Entities[0]["sum_total"];
 
-				// Check that the internal value is not zero before reading the Money
 				if (aliasedTotal != null && aliasedTotal.Value != null)
 				{
 					netTotal = ((Money)aliasedTotal.Value).Value;
 				}
 			}
 
+			// Calculate Max Activation Spend
+			decimal maxActivationSpend = CalculateMaxActivationSpend(netTotal, service, tracingService);
+
 			Entity dealToUpdate = new Entity("new_deals", dealId);
 			dealToUpdate["new_total"] = new Money(netTotal);
+			dealToUpdate["new_maxactivationspend"] = new Money(maxActivationSpend);
 			service.Update(dealToUpdate);
+
+			tracingService.Trace($"Deal {dealId} updated -> Total: {netTotal}, MaxActivationSpend: {maxActivationSpend}");
+		}
+
+		/// <summary>
+		/// Reads the Max Activation Spend percentage from the Deal Configuration table
+		/// and applies it to the deal total. Returns 0 if config is missing or total is 0.
+		/// </summary>
+		private decimal CalculateMaxActivationSpend(decimal dealTotal, IOrganizationService service, ITracingService tracingService)
+		{
+			if (dealTotal == 0m)
+			{
+				tracingService.Trace("Deal total is 0, MaxActivationSpend = 0.");
+				return 0m;
+			}
+
+			QueryExpression configQuery = new QueryExpression("new_dealconfiguration")
+			{
+				ColumnSet = new ColumnSet("new_maxactivationspendpercent"),
+				TopCount = 1
+			};
+
+			EntityCollection configs = service.RetrieveMultiple(configQuery);
+
+			if (configs.Entities.Count == 0)
+			{
+				tracingService.Trace("WARNING: No Deal Configuration record found. MaxActivationSpend will not be calculated.");
+				return 0m;
+			}
+
+			Entity config = configs.Entities[0];
+
+			if (!config.Contains("new_maxactivationspendpercent"))
+			{
+				tracingService.Trace("WARNING: Deal Configuration record exists but new_maxactivationspendpercent is null.");
+				return 0m;
+			}
+
+			decimal percent = Convert.ToDecimal(config["new_maxactivationspendpercent"]);
+			decimal result = Math.Round(dealTotal * (percent / 100m), 2, MidpointRounding.AwayFromZero);
+
+			tracingService.Trace($"MaxActivationSpend calc -> Total: {dealTotal} × {percent}% = {result}");
+			return result;
 		}
 
 		#endregion

@@ -56,6 +56,16 @@ namespace Pl.Deal.OptionAutomation
 
 			try
 			{
+				// FLUJO 0 (PRE-OPERATION ONLY): Validate Won closure has valid Option Status
+				if (context.Stage == 20 && target.Contains("new_dealstatus"))
+				{
+					ValidateOptionStatusForWonClosure(target, preImage, service, tracing);
+					// If we got here, validation passed. The other flujos run in Post-Op (40).
+					// Pre-Op validation should EXIT here without running other flujos.
+					tracing.Trace("--- Pre-Op validation completed. Allowing save. ---");
+					return;
+				}
+
 				// FLUJO 1: Opt-Out → Closed Lost (+ cascada multi-year)
 				if (target.Contains("new_dealoptiondecision"))
 				{
@@ -336,6 +346,57 @@ namespace Pl.Deal.OptionAutomation
 			{
 				target[attr] = source[attr];
 			}
+		}
+
+		private void ValidateOptionStatusForWonClosure(Entity target, Entity preImage, IOrganizationService service, ITracingService tracing)
+		{
+			EntityReference newStatusRef = target.GetAttributeValue<EntityReference>("new_dealstatus");
+			if (newStatusRef == null) return;
+
+			// Get the new status code
+			Entity newStatusRecord = service.Retrieve(newStatusRef.LogicalName, newStatusRef.Id, new ColumnSet("new_code"));
+			string newStatusCode = newStatusRecord.GetAttributeValue<string>("new_code");
+
+			if (newStatusCode != STATUS_CLOSED_WON)
+			{
+				tracing.Trace($"Status changing to {newStatusCode}, not Won. No validation needed.");
+				return;
+			}
+
+			// Skip validation for Playoff Deals (different lifecycle, no Option Status applies)
+			EntityReference regularSeasonDeal = null;
+			if (target.Contains("new_regularseasondeal"))
+				regularSeasonDeal = target.GetAttributeValue<EntityReference>("new_regularseasondeal");
+			else if (preImage != null && preImage.Contains("new_regularseasondeal"))
+				regularSeasonDeal = preImage.GetAttributeValue<EntityReference>("new_regularseasondeal");
+
+			if (regularSeasonDeal != null)
+			{
+				tracing.Trace("This is a Playoff Deal. Skipping Option Status validation.");
+				return;
+			}
+
+			// Get the new (or current via PreImage) Deal Option Status
+			OptionSetValue optionStatus = null;
+			if (target.Contains("new_optouttype"))
+				optionStatus = target.GetAttributeValue<OptionSetValue>("new_optouttype");
+			else if (preImage != null && preImage.Contains("new_optouttype"))
+				optionStatus = preImage.GetAttributeValue<OptionSetValue>("new_optouttype");
+
+			const int OPTION_STATUS_UNKNOWN = 100000003;
+
+			bool isInvalid = (optionStatus == null || optionStatus.Value == OPTION_STATUS_UNKNOWN);
+
+			if (isInvalid)
+			{
+				tracing.Trace($"BLOCKING: Deal Option Status is {(optionStatus == null ? "null" : optionStatus.Value.ToString())}, cannot close Won.");
+				throw new InvalidPluginExecutionException(
+					"Cannot close this Deal as Won: 'Deal Option Status' must be set to Opt-In, Opt-Out, or No Option (not blank or Unknown). " +
+					"Please update the Deal Option Status before closing as Won."
+				);
+			}
+
+			tracing.Trace($"Validation passed: Option Status = {optionStatus.Value}, Deal can close as Won.");
 		}
 	}
 }
