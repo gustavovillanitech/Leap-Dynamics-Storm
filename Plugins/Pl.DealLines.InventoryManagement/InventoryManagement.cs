@@ -143,8 +143,8 @@ namespace Pl.DealLines.InventoryManagement
 				}
 			}
 
-			// Calculate Max Activation Spend
-			decimal maxActivationSpend = CalculateMaxActivationSpend(netTotal, service, tracingService);
+			// Pass dealId so calc can read the frozen percent from the Deal first
+			decimal maxActivationSpend = CalculateMaxActivationSpend(dealId, netTotal, service, tracingService);
 
 			Entity dealToUpdate = new Entity("new_deals", dealId);
 			dealToUpdate["new_total"] = new Money(netTotal);
@@ -155,10 +155,13 @@ namespace Pl.DealLines.InventoryManagement
 		}
 
 		/// <summary>
-		/// Reads the Max Activation Spend percentage from the Deal Configuration table
-		/// and applies it to the deal total. Returns 0 if config is missing or total is 0.
+		/// Calculates Max Activation Spend for a Deal.
+		/// Priority:
+		///   1. If the Deal has a frozen percent (new_maxactivationspendpercent), use it.
+		///   2. Otherwise, fall back to the global percent in new_DealConfiguration.
+		/// Returns 0 if no source is available or total is 0.
 		/// </summary>
-		private decimal CalculateMaxActivationSpend(decimal dealTotal, IOrganizationService service, ITracingService tracingService)
+		private decimal CalculateMaxActivationSpend(Guid dealId, decimal dealTotal, IOrganizationService service, ITracingService tracingService)
 		{
 			if (dealTotal == 0m)
 			{
@@ -166,33 +169,47 @@ namespace Pl.DealLines.InventoryManagement
 				return 0m;
 			}
 
-			QueryExpression configQuery = new QueryExpression("new_dealconfiguration")
-			{
-				ColumnSet = new ColumnSet("new_maxactivationspendpercent"),
-				TopCount = 1
-			};
+			// 1. Try frozen percent on the Deal first
+			Entity deal = service.Retrieve("new_deals", dealId, new ColumnSet("new_maxactivationspendpercent"));
+			decimal? percent = null;
 
-			EntityCollection configs = service.RetrieveMultiple(configQuery);
-
-			if (configs.Entities.Count == 0)
+			if (deal.Contains("new_maxactivationspendpercent") && deal["new_maxactivationspendpercent"] != null)
 			{
-				tracingService.Trace("WARNING: No Deal Configuration record found. MaxActivationSpend will not be calculated.");
-				return 0m;
+				percent = Convert.ToDecimal(deal["new_maxactivationspendpercent"]);
+				tracingService.Trace($"Using FROZEN percent from Deal: {percent}%");
+			}
+			else
+			{
+				// 2. Fall back to global config
+				QueryExpression configQuery = new QueryExpression("new_dealconfiguration")
+				{
+					ColumnSet = new ColumnSet("new_maxactivationspendpercent"),
+					TopCount = 1
+				};
+
+				EntityCollection configs = service.RetrieveMultiple(configQuery);
+
+				if (configs.Entities.Count == 0)
+				{
+					tracingService.Trace("WARNING: No Deal Configuration record found. MaxActivationSpend will not be calculated.");
+					return 0m;
+				}
+
+				Entity config = configs.Entities[0];
+
+				if (!config.Contains("new_maxactivationspendpercent") || config["new_maxactivationspendpercent"] == null)
+				{
+					tracingService.Trace("WARNING: Deal Configuration exists but new_maxactivationspendpercent is null.");
+					return 0m;
+				}
+
+				percent = Convert.ToDecimal(config["new_maxactivationspendpercent"]);
+				tracingService.Trace($"Using GLOBAL percent from DealConfiguration: {percent}%");
 			}
 
-			Entity config = configs.Entities[0];
-
-			if (!config.Contains("new_maxactivationspendpercent"))
-			{
-				tracingService.Trace("WARNING: Deal Configuration record exists but new_maxactivationspendpercent is null.");
-				return 0m;
-			}
-
-			decimal percent = Convert.ToDecimal(config["new_maxactivationspendpercent"]);
-			decimal result = Math.Round(dealTotal * (percent / 100m), 2, MidpointRounding.AwayFromZero);
-
-			tracingService.Trace($"MaxActivationSpend calc -> Total: {dealTotal} × {percent}% = {result}");
-			return result;
+			decimal calcResult = Math.Round(dealTotal * (percent.Value / 100m), 2, MidpointRounding.AwayFromZero);
+			tracingService.Trace($"MaxActivationSpend calc -> Total: {dealTotal} × {percent}% = {calcResult}");
+			return calcResult;
 		}
 
 		#endregion

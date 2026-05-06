@@ -353,50 +353,106 @@ namespace Pl.Deal.OptionAutomation
 			EntityReference newStatusRef = target.GetAttributeValue<EntityReference>("new_dealstatus");
 			if (newStatusRef == null) return;
 
-			// Get the new status code
 			Entity newStatusRecord = service.Retrieve(newStatusRef.LogicalName, newStatusRef.Id, new ColumnSet("new_code"));
 			string newStatusCode = newStatusRecord.GetAttributeValue<string>("new_code");
 
 			if (newStatusCode != STATUS_CLOSED_WON)
 			{
-				tracing.Trace($"Status changing to {newStatusCode}, not Won. No validation needed.");
+				tracing.Trace($"Status changing to {newStatusCode}, not Won. No validation/freeze needed.");
 				return;
 			}
 
-			// Skip validation for Playoff Deals (different lifecycle, no Option Status applies)
+			// Skip Playoff Deals for the Option Status validation
 			EntityReference regularSeasonDeal = null;
 			if (target.Contains("new_regularseasondeal"))
 				regularSeasonDeal = target.GetAttributeValue<EntityReference>("new_regularseasondeal");
 			else if (preImage != null && preImage.Contains("new_regularseasondeal"))
 				regularSeasonDeal = preImage.GetAttributeValue<EntityReference>("new_regularseasondeal");
 
-			if (regularSeasonDeal != null)
+			bool isPlayoffDeal = (regularSeasonDeal != null);
+
+			// ===== Part 1: Validate Option Status =====
+			if (!isPlayoffDeal)
+			{
+				OptionSetValue optionStatus = null;
+				if (target.Contains("new_optouttype"))
+					optionStatus = target.GetAttributeValue<OptionSetValue>("new_optouttype");
+				else if (preImage != null && preImage.Contains("new_optouttype"))
+					optionStatus = preImage.GetAttributeValue<OptionSetValue>("new_optouttype");
+
+				const int OPTION_STATUS_UNKNOWN = 100000003;
+				bool isInvalid = (optionStatus == null || optionStatus.Value == OPTION_STATUS_UNKNOWN);
+
+				if (isInvalid)
+				{
+					tracing.Trace($"BLOCKING: Deal Option Status is {(optionStatus == null ? "null" : optionStatus.Value.ToString())}, cannot close Won.");
+					throw new InvalidPluginExecutionException(
+						"Cannot close this Deal as Won: 'Deal Option Status' must be set to Opt-In, Opt-Out, or No Option (not blank or Unknown). " +
+						"Please update the Deal Option Status before closing as Won."
+					);
+				}
+
+				tracing.Trace($"Validation passed: Option Status = {optionStatus.Value}, Deal can close as Won.");
+			}
+			else
 			{
 				tracing.Trace("This is a Playoff Deal. Skipping Option Status validation.");
+			}
+
+			// ===== Part 2: Freeze Max Activation Spend Percent =====
+			// Applies to ALL Deals closing Won (regular + playoff)
+			FreezeMaxActivationSpendPercent(target, preImage, service, tracing);
+		}
+
+		/// <summary>
+		/// Captures the current global Max Activation Spend percent from new_DealConfiguration
+		/// and stores it on the Deal itself. Idempotent: if the Deal already has a frozen percent,
+		/// it is NOT overwritten (handles the rare case of a Deal that goes Won → Lost → Open → Won again).
+		/// </summary>
+		private void FreezeMaxActivationSpendPercent(Entity target, Entity preImage, IOrganizationService service, ITracingService tracing)
+		{
+			// Idempotency check: if either the Target (already in this transaction) or the PreImage
+			// already has a frozen percent, skip.
+			decimal? existingPercent = null;
+			if (target.Contains("new_maxactivationspendpercent") && target["new_maxactivationspendpercent"] != null)
+				existingPercent = Convert.ToDecimal(target["new_maxactivationspendpercent"]);
+			else if (preImage != null && preImage.Contains("new_maxactivationspendpercent") && preImage["new_maxactivationspendpercent"] != null)
+				existingPercent = Convert.ToDecimal(preImage["new_maxactivationspendpercent"]);
+
+			if (existingPercent.HasValue)
+			{
+				tracing.Trace($"Freeze SKIPPED: Deal already has frozen percent = {existingPercent}%.");
 				return;
 			}
 
-			// Get the new (or current via PreImage) Deal Option Status
-			OptionSetValue optionStatus = null;
-			if (target.Contains("new_optouttype"))
-				optionStatus = target.GetAttributeValue<OptionSetValue>("new_optouttype");
-			else if (preImage != null && preImage.Contains("new_optouttype"))
-				optionStatus = preImage.GetAttributeValue<OptionSetValue>("new_optouttype");
-
-			const int OPTION_STATUS_UNKNOWN = 100000003;
-
-			bool isInvalid = (optionStatus == null || optionStatus.Value == OPTION_STATUS_UNKNOWN);
-
-			if (isInvalid)
+			// Read the current global percent from new_DealConfiguration
+			QueryExpression configQuery = new QueryExpression("new_dealconfiguration")
 			{
-				tracing.Trace($"BLOCKING: Deal Option Status is {(optionStatus == null ? "null" : optionStatus.Value.ToString())}, cannot close Won.");
-				throw new InvalidPluginExecutionException(
-					"Cannot close this Deal as Won: 'Deal Option Status' must be set to Opt-In, Opt-Out, or No Option (not blank or Unknown). " +
-					"Please update the Deal Option Status before closing as Won."
-				);
+				ColumnSet = new ColumnSet("new_maxactivationspendpercent"),
+				TopCount = 1
+			};
+
+			EntityCollection configs = service.RetrieveMultiple(configQuery);
+
+			if (configs.Entities.Count == 0)
+			{
+				tracing.Trace("WARNING: No Deal Configuration record found. Cannot freeze percent on Deal closing Won.");
+				return;
 			}
 
-			tracing.Trace($"Validation passed: Option Status = {optionStatus.Value}, Deal can close as Won.");
+			Entity config = configs.Entities[0];
+			if (!config.Contains("new_maxactivationspendpercent") || config["new_maxactivationspendpercent"] == null)
+			{
+				tracing.Trace("WARNING: Deal Configuration exists but new_maxactivationspendpercent is null. Cannot freeze.");
+				return;
+			}
+
+			decimal globalPercent = Convert.ToDecimal(config["new_maxactivationspendpercent"]);
+
+			// Modify the Target in Pre-Op so the freeze persists in the SAME update as the Won status change
+			target["new_maxactivationspendpercent"] = globalPercent;
+
+			tracing.Trace($"Freeze APPLIED: Deal will be saved with new_maxactivationspendpercent = {globalPercent}%.");
 		}
 	}
 }

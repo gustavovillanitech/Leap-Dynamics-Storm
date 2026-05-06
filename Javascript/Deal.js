@@ -109,6 +109,11 @@ DealForm.applyConditionalVisibility = function (executionContext) {
     var originatingAttr = formContext.getAttribute("new_originatingopportunity");
     var hasOriginating = (originatingAttr && originatingAttr.getValue() !== null);
     setFieldVisible("new_originatingopportunity", hasOriginating);
+
+    // Rule 5: Frozen Max Activation Spend Percent — visible only when Deal has the value
+    var frozenPercentAttr = formContext.getAttribute("new_maxactivationspendpercent");
+    var hasFrozenPercent = (frozenPercentAttr && frozenPercentAttr.getValue() !== null);
+    setFieldVisible("new_maxactivationspendpercent", hasFrozenPercent);
 };
 
 /**
@@ -339,20 +344,20 @@ DealForm.onSaveValidateOptionStatusForWon = function (executionContext) {
 
 /**
  * Calculates and displays Max Activation Spend on the form.
- * Reads the percentage from the Deal Configuration table (singleton, first record).
- * Triggered onLoad and OnChange of new_total.
+ * Priority:
+ *   1. If the Deal has a frozen percent (new_maxactivationspendpercent), use it.
+ *   2. Otherwise, fall back to the global percent in new_DealConfiguration.
  *
  * NOTE: The plugin (InventoryManagement.RollupTotalsToParentDeal) is the
  * authoritative source. This JS only mirrors the calculation in the UI for
  * immediate visual feedback when the form is open and new_total changes.
- *
- * @param {object} executionContext
  */
 DealForm.calculateMaxActivationSpend = function (executionContext) {
     var formContext = executionContext.getFormContext();
 
     var totalAttr = formContext.getAttribute("new_total");
     var maxAttr = formContext.getAttribute("new_maxactivationspend");
+    var frozenPercentAttr = formContext.getAttribute("new_maxactivationspendpercent");
 
     if (!totalAttr || !maxAttr) {
         console.warn("DealForm.calculateMaxActivationSpend: missing new_total or new_maxactivationspend on form.");
@@ -366,7 +371,17 @@ DealForm.calculateMaxActivationSpend = function (executionContext) {
         return;
     }
 
-    // Fetch the singleton config record
+    // Priority 1: Deal-level frozen percent
+    var frozenPercent = frozenPercentAttr ? frozenPercentAttr.getValue() : null;
+
+    if (frozenPercent !== null && frozenPercent !== undefined) {
+        var maxSpendFrozen = Math.round((dealTotal * (frozenPercent / 100)) * 100) / 100;
+        maxAttr.setValue(maxSpendFrozen);
+        console.log("MaxActivationSpend (UI, FROZEN) -> Total: " + dealTotal + " × " + frozenPercent + "% = " + maxSpendFrozen);
+        return;
+    }
+
+    // Priority 2: Global config
     Xrm.WebApi.retrieveMultipleRecords(
         "new_dealconfiguration",
         "?$select=new_maxactivationspendpercent&$top=1"
@@ -378,17 +393,16 @@ DealForm.calculateMaxActivationSpend = function (executionContext) {
                 return;
             }
 
-            var percent = result.entities[0].new_maxactivationspendpercent;
-            if (percent === null || percent === undefined) {
+            var globalPercent = result.entities[0].new_maxactivationspendpercent;
+            if (globalPercent === null || globalPercent === undefined) {
                 console.warn("DealForm.calculateMaxActivationSpend: new_maxactivationspendpercent is null in config.");
                 maxAttr.setValue(null);
                 return;
             }
 
-            var maxSpend = Math.round((dealTotal * (percent / 100)) * 100) / 100;
-            maxAttr.setValue(maxSpend);
-
-            console.log("MaxActivationSpend (UI) -> Total: " + dealTotal + " × " + percent + "% = " + maxSpend);
+            var maxSpendGlobal = Math.round((dealTotal * (globalPercent / 100)) * 100) / 100;
+            maxAttr.setValue(maxSpendGlobal);
+            console.log("MaxActivationSpend (UI, GLOBAL) -> Total: " + dealTotal + " × " + globalPercent + "% = " + maxSpendGlobal);
         },
         function error(err) {
             console.error("DealForm.calculateMaxActivationSpend: error fetching config: " + err.message);
