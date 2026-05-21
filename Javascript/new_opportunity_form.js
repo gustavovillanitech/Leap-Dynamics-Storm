@@ -1,4 +1,4 @@
-var OpportunityForm = OpportunityForm || {};
+ï»¿var OpportunityForm = OpportunityForm || {};
 var OpportunityFormCP = OpportunityFormCP || {};
 
 // --- Cache initialization ---
@@ -189,7 +189,7 @@ OpportunityForm.filterTicketingStage = function(formContext) {
     
     var map = {
         100000000: [100000000, 100000001, 100000002, 100000003, 100000004, 100000005, 100000006], //Ticketing - New FSE
-        100000001: [100000000, 100000001, 100000002, 100000007, 100000005, 100000006], //Ticketing - Groups
+        100000001: [100000000, 100000001, 100000002, 100000007, 100000047, 100000005, 100000006], //Ticketing - Groups
         100000004: [100000000, 100000010, 100000011, 100000012, 100000013, 100000005, 100000006], //Ticketing - Premium Sales
         100000005: [100000000, 100000014, 100000015, 100000016, 100000017, 100000018, 100000019, 100000020, 100000021, 100000022, 100000006], //Ticketing - Premium Service
         100000002: [100000031, 100000032, 100000033, 100000044, 100000045, 100000034, 100000037, 100000046, 100000039, 100000040, 100000036, 100000041, 100000042, 100000043], //Ticketing - Service
@@ -234,7 +234,7 @@ OpportunityForm.setRequiredFields = function(formContext) {
         }
         // RULE 2: Ticketing - Groups (100000001)
         if (!isDetailRequired && oppType === 100000001) {
-            var stagesR2 = [100000007, 100000005];
+            var stagesR2 = [100000007, 100000047, 100000005];
             if (prodType === 100000001 && stagesR2.indexOf(stage) > -1) {
                 isDetailRequired = true;
             }
@@ -361,8 +361,8 @@ OpportunityFormCP.filterSalesStageCP = function(formContext) {
             100000000, // 01 - Prospect
             100000010, // 02 - Discovery Meeting
             100000011, // 03 - Define Objectives
-            100000012, // 04 - Idea Generation – Internal
-            100000013, // 05 - Idea Generation – External
+            100000012, // 04 - Idea Generation â€“ Internal
+            100000013, // 05 - Idea Generation â€“ External
             100000027, // 06 - Ready for Proposal
             100000001, // 07 - Pitched
             100000015, // 08 - Follow up / Negotiation
