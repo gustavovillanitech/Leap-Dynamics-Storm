@@ -8,7 +8,6 @@ DealForm.onLoad = function (executionContext) {
     DealForm.setDealOptionRequirements(executionContext);
     DealForm.setPlayoffOptionRequirements(executionContext);
     DealForm.applyConditionalVisibility(executionContext);
-    DealForm.calculateMaxActivationSpend(executionContext);
 };
  
 DealForm.setDefaultAccountFromOpportunity = function (executionContext) {
