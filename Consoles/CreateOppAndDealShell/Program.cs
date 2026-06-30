@@ -89,7 +89,8 @@ namespace CreateOppAndDealShell
 		// ==============================================================
 		//  CONFIGURATION – verify before running
 		// ==============================================================
-		private const string EnvUrl = "https://stormbasketball.crm.dynamics.com/";
+		//private const string EnvUrl = "https://stormbasketball.crm.dynamics.com/"; // <-- sandbox URL first!
+		private const string EnvUrl = "https://org00bff505.crm.dynamics.com/"; // <-- sandbox URL first!
 		private const string CrmUsername = "FanInteractive@stormbasketball.com";
 		private const string CrmPassword = "CsCXbm2E-WtQ3c4DCy2!";
 		private const string AppId = "51f81489-12ee-4a9e-aaae-a2591f45987d";
