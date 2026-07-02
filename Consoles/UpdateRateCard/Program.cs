@@ -2,41 +2,32 @@
 //  Storm Basketball – Dynamics 365 Inventory Rate-Card Updater
 //  Purpose     : Bulk-update the new_inventory catalog from Zach's
 //                Excel (rate / hard cost / quantity) and UPSERT the
-//                net-new items (no Trak Inventory Id), all for a single
-//                target Season. Designed to run UNCHANGED in Sandbox
-//                first, then in Production (same binary, change ONLY
-//                the connection consts).
-//  Environment : https://stormbasketball.crm.dynamics.com/
+//                net-new items (no Trak Inventory Id), across all the
+//                target Seasons in TargetSeasons[]. Same binary runs in
+//                Sandbox first, then Production (change ONLY the consts).
 //  SDK         : Microsoft.Xrm.Tooling.Connector (CrmServiceClient)
 //  Excel       : ClosedXML  (NuGet: ClosedXML)
 //  .NET        : Framework 4.6.2
 //
-//  WHAT IT DOES, IN ORDER
-//   1. Connect to Dynamics (single environment).
-//   2. Read the Inventory sheet from the Excel file.
-//   3. Snapshot ALL inventory of the target Season into memory (1 query).
-//   4. BACKUP that snapshot to CSV (revert artifact Ray asked for).
-//   5. PRE-FLIGHT (read-only): resolve Season, resolve every Collection
-//      name -> GUID, check net-new Products by name, validate that each
-//      existing inventory Name matches its Product Name. Report blockers.
-//   6. Ask for explicit YES confirmation (this MODIFIES LIVE DATA).
-//   7. UPDATE existing (delta-only: write a field only if it changed).
-//      - Recompute new_unsold = new_quantity - new_sold (live sold).
-//      - Never touch new_sold / new_pitched / new_allocated.
-//   8. UPSERT net-new (dedupe by Name+Season; find-or-create Product).
-//   9. Summary + full log.
-//
-//  KEY DECISIONS BAKED IN (agreed with Gustavo)
+//  KEY DECISIONS
 //   - Sold/Unsold/Pitched/Allocated are plugin-maintained: NOT imported.
-//   - new_unsold is recomputed in THIS console (the InventoryManagement
-//     plugin only recomputes unsold when a Deal Line QUANTITY changes,
-//     so a direct inventory update would otherwise leave unsold stale).
-//   - "Unlimited" quantity -> UNLIMITED_QUANTITY = Int32.Max (prod convention).
+//   - new_unsold recomputed here (plugin only recomputes it on a Deal Line
+//     quantity change, so a direct inventory update leaves it stale).
+//   - "Unlimited" quantity -> Int32.Max (prod convention).
 //   - Descriptions are PHASE 2 (separate curated file): NOT imported here.
-//   - Multi-year: processes every season in the TargetSeasons[] list in one run.
-//     2026 (the source season) matches by Trak Id and writes the Trak Id; future
-//     seasons match by Name+Collection ONLY and do NOT copy the Trak Id (the file's
-//     Trak Ids belong to 2026). Collections/Products are resolved once (global tables).
+//   - Multi-year: processes every season in TargetSeasons[] in one run.
+//     2026 (source season) matches by Trak Id and writes it; future seasons
+//     match by Name+Collection ONLY and do NOT copy the Trak Id.
+//
+//  *** FIX A (matching key) ***
+//   Within a season, inventory Name is NOT unique (PLAYOFFS duplicates the
+//   regular item), so the match index must key on Name+Collection. But
+//   RetrieveMultiple does NOT reliably populate EntityReference.Name on a
+//   lookup — only .Id is always present. The previous build keyed on
+//   new_collection?.Name, which came back empty at runtime, so PLAYOFFS
+//   rows missed their match and were CREATED as duplicates in the regular
+//   collection (170 bad records). This build keys on Name + Collection GUID
+//   (.Id), always populated, resolving the Excel side's GUID via collMap.
 //
 //  ⚠ SECURITY: do not commit real credentials. Prefer env vars / args.
 // ============================================================
@@ -55,7 +46,7 @@ using System.Text;
 namespace UpdateRateCard
 {
 	// ================================================================
-	//  Logger: console (colored) + .txt, mirrors the shell-creator tool
+	//  Logger: console (colored) + .txt
 	// ================================================================
 	internal sealed class Logger : IDisposable
 	{
@@ -109,6 +100,21 @@ namespace UpdateRateCard
 		public decimal? Quantity { get; set; }    // col L  (resolved; Unlimited -> const)
 		public bool IsUnlimited { get; set; }     // col L was "Unlimited"
 		public bool IsNetNew => !TrakId.HasValue;
+
+		// --- Playoffs handling (set by ClassifyPlayoffsRows, data-driven) ---
+		// A no-Trak PLAYOFFS row whose Name also exists in a regular collection needs its OWN
+		// product so the "Set Collection-Division on Inventory" workflow does not inherit the
+		// regular product's collection. The "- Playoffs" suffix forces find-or-create to make a
+		// NEW product (no prior collection) so the workflow has nothing to override.
+		public bool NeedsPlayoffsSuffix { get; set; }
+		// A no-Trak PLAYOFFS row whose Name already exists as a WITH-Trak PLAYOFFS row = dirty
+		// data in the source file (same item loaded twice); skip it and warn.
+		public bool SkipAsInternalDuplicate { get; set; }
+
+		public const string PlayoffsSuffix = " - Playoffs";
+		// Effective name written to CRM (item + product). Suffix applied only when flagged.
+		public string EffectiveName => NeedsPlayoffsSuffix && !string.IsNullOrWhiteSpace(Name)
+			? Name.Trim() + PlayoffsSuffix : Name;
 	}
 
 	internal class Program
@@ -116,8 +122,8 @@ namespace UpdateRateCard
 		// ==============================================================
 		//  CONFIGURATION – VERIFY BEFORE EVERY RUN
 		// ==============================================================
-		//private const string EnvUrl = "https://stormbasketball.crm.dynamics.com/"; // <-- sandbox URL first!
-		private const string EnvUrl = "https://org00bff505.crm.dynamics.com/"; // <-- sandbox URL first!
+		//private const string EnvUrl = "https://stormbasketball.crm.dynamics.com/"; // PRODUCTION
+		private const string EnvUrl = "https://org00bff505.crm.dynamics.com/";       // <-- SANDBOX first!
 		private const string CrmUsername = "FanInteractive@stormbasketball.com";
 		private const string CrmPassword = "CsCXbm2E-WtQ3c4DCy2!";
 		private const string AppId = "51f81489-12ee-4a9e-aaae-a2591f45987d";
@@ -147,16 +153,14 @@ namespace UpdateRateCard
 				// "Extra Premium", "Pre-Game Broadcast Spot", "Incremental Games", "Social Boost", "Product Placement",
 			};
 
-		// "Unlimited" quantity convention.
-		// Production already stores Unlimited as Int32.Max (2147483647) — 887 rows use it.
-		// We align to that existing convention instead of inventing a new value.
+		// "Unlimited" quantity convention. Production stores Unlimited as Int32.Max (2147483647).
 		private const decimal UNLIMITED_QUANTITY = 2147483647m;
 
-		// Entity / field names that are worth confirming once (primary name fields of custom tables)
+		// Custom-table primary name fields (confirm once)
 		private const string CollectionEntity = "new_collection";
-		private const string CollectionNameField = "new_name";   // confirm: primary name of new_collection
+		private const string CollectionNameField = "new_name";
 		private const string ProductEntity = "new_product";
-		private const string ProductNameField = "new_name";      // confirm: primary name of new_product
+		private const string ProductNameField = "new_name";
 
 		// Toggle: set inventory description from "Specifications" col E (default OFF — descriptions are Phase 2)
 		private const bool ImportDescriptions = false;
@@ -209,17 +213,19 @@ namespace UpdateRateCard
 					if (unlimitedCount > 0) log.Warning($"{unlimitedCount} rows 'Unlimited' -> {UNLIMITED_QUANTITY}.");
 					Console.WriteLine();
 
+					// ── 2b. Classify PLAYOFFS rows (suffix / skip / as-is) ─
+					ClassifyPlayoffsRows(rows, log);
+					Console.WriteLine();
+
 					// ── 3. PRE-FLIGHT: resolve GLOBAL lookups (once) ─────
-					//      Collections and Products are global tables (not per-season),
-					//      so they are resolved a single time before the season loop.
 					log.Info("PRE-FLIGHT (read-only): resolving global lookups...");
 					var distinctCollections = rows.Where(r => !string.IsNullOrWhiteSpace(r.Collection))
 						.Select(r => r.Collection.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 					Dictionary<string, EntityReference> collMap = ResolveCollections(svc, distinctCollections, log);
 					var missingColls = distinctCollections.Where(c => !collMap.ContainsKey(Norm(c))).ToList();
 
-					var netNewNames = rows.Where(r => r.IsNetNew && !string.IsNullOrWhiteSpace(r.Name))
-						.Select(r => r.Name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+					var netNewNames = rows.Where(r => r.IsNetNew && !r.SkipAsInternalDuplicate && !string.IsNullOrWhiteSpace(r.Name))
+						.Select(r => r.EffectiveName.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 					Dictionary<string, EntityReference> productMap = ResolveProducts(svc, netNewNames);
 					int productsToCreate = netNewNames.Count(n => !productMap.ContainsKey(Norm(n)));
 
@@ -288,10 +294,8 @@ namespace UpdateRateCard
 
 		// ==============================================================
 		//  Process ONE season: resolve -> snapshot -> backup -> upsert rows.
-		//  Returns null (skipped) if the season can't be resolved.
 		//  collMap / productMap are SHARED across seasons (global tables);
-		//  productMap is mutated as net-new products get created, so later
-		//  seasons reuse the products created during the 2026 pass.
+		//  productMap is mutated as net-new products get created.
 		// ==============================================================
 		private static SeasonResult ProcessSeason(CrmServiceClient svc, string seasonName, List<InvRow> rows,
 			Dictionary<string, EntityReference> collMap, Dictionary<string, EntityReference> productMap,
@@ -307,10 +311,14 @@ namespace UpdateRateCard
 			var byTrak = snapshot.Where(e => e.Contains("new_trakinventoryid"))
 				.GroupBy(e => e.GetAttributeValue<int>("new_trakinventoryid"))
 				.ToDictionary(g => g.Key, g => g.First());
-			// Name is NOT unique within a season (PLAYOFFS duplicates regular items) -> Name+Collection.
+
+			// *** FIX A ***  Key on Name + Collection GUID (.Id), NOT .Name.
+			// RetrieveMultiple does not reliably populate EntityReference.Name on a
+			// lookup; the .Id always is. Keying on .Name produced empty collection
+			// keys at runtime, so PLAYOFFS rows missed and were created as duplicates.
 			var byKey = snapshot.Where(e => e.Contains("new_name"))
-				.GroupBy(e => InvKey(e.GetAttributeValue<string>("new_name"),
-									 e.GetAttributeValue<EntityReference>("new_collection")?.Name))
+				.GroupBy(e => InvKeyId(e.GetAttributeValue<string>("new_name"),
+									   e.GetAttributeValue<EntityReference>("new_collection")?.Id))
 				.ToDictionary(g => g.Key, g => g.First());
 
 			// Per-season backup (revert artifact)
@@ -325,20 +333,29 @@ namespace UpdateRateCard
 			var res = new SeasonResult();
 			foreach (var r in rows)
 			{
+				// Skip dirty-data PLAYOFFS duplicates (a Trak-linked PLAYOFFS row already covers them)
+				if (r.SkipAsInternalDuplicate)
+					continue;
+
 				// In future years, skip rows Zach flagged as 2026-only (empty set by default)
 				if (!isSourceSeason && r.Name != null && ExcludeFromFutureYears.Contains(r.Name.Trim()))
 					continue;
 
 				try
 				{
+					// Effective name carries the "- Playoffs" suffix when this is a separate playoffs item.
+					string effName = r.EffectiveName;
+
+					// Resolve the Excel row's collection GUID once (used for match AND write).
+					EntityReference coll = !string.IsNullOrWhiteSpace(r.Collection)
+						? collMap[Norm(r.Collection.Trim())] : null;
+					Guid? collId = coll?.Id;
+
 					Entity match = null;
 					if (isSourceSeason && r.TrakId.HasValue && byTrak.TryGetValue(r.TrakId.Value, out var et))
 						match = et;
-					else if (!string.IsNullOrWhiteSpace(r.Name) && byKey.TryGetValue(InvKey(r.Name, r.Collection), out var en))
-						match = en; // net-new dedupe + future-year matching + trak fallback (Name+Collection)
-
-					EntityReference coll = !string.IsNullOrWhiteSpace(r.Collection)
-						? collMap[Norm(r.Collection.Trim())] : null;
+					else if (!string.IsNullOrWhiteSpace(effName) && byKey.TryGetValue(InvKeyId(effName, collId), out var en))
+						match = en; // net-new dedupe + future-year matching + trak fallback (EffectiveName+Collection GUID)
 
 					if (match != null)
 					{
@@ -349,7 +366,7 @@ namespace UpdateRateCard
 					{
 						Guid newId = CreateNetNew(svc, r, seasonRef, coll, isSourceSeason, productMap, log);
 						// register so a duplicate row in the same file won't create twice
-						byKey[InvKey(r.Name, r.Collection)] = new Entity("new_inventory", newId) { ["new_name"] = r.Name };
+						byKey[InvKeyId(effName, collId)] = new Entity("new_inventory", newId) { ["new_name"] = effName };
 						res.Created++;
 					}
 				}
@@ -415,6 +432,65 @@ namespace UpdateRateCard
 		}
 
 		// ==============================================================
+		//  Classify PLAYOFFS rows (data-driven, no hardcoded lists).
+		//  Zach confirmed: Playoffs items are SEPARATE inventory items with their
+		//  own product (Trak models products per collection). We therefore:
+		//
+		//   1) SUFFIX  -> PLAYOFFS row, NO Trak Id, whose Name ALSO exists in a
+		//                 regular (non-PLAYOFFS) collection. It gets a "- Playoffs"
+		//                 suffix so find-or-create makes a NEW product (no prior
+		//                 collection) and the Set-Collection-Division workflow can't
+		//                 override PLAYOFFS. (The 17 twins.)
+		//   2) SKIP    -> PLAYOFFS row, NO Trak Id, whose Name already exists as a
+		//                 WITH-Trak PLAYOFFS row = same item loaded twice in the file
+		//                 (dirty source data). Skipped with a warning; the Trak row is
+		//                 the source of truth. (Parking - 1st Ave, Suite, VIP Hospitality Space.)
+		//   3) AS-IS   -> everything else, incl. PLAYOFFS-only items with no regular
+		//                 twin (e.g. "Presenting Partner - Playoffs") and all Trak rows.
+		//
+		//  Names are compared normalized (trim + lowercase). Runs ONCE on the parsed file.
+		// ==============================================================
+		private static void ClassifyPlayoffsRows(List<InvRow> rows, Logger log)
+		{
+			bool IsPlayoffs(InvRow r) => !string.IsNullOrWhiteSpace(r.Collection)
+				&& string.Equals(r.Collection.Trim(), "PLAYOFFS", StringComparison.OrdinalIgnoreCase);
+
+			// Names present in a REGULAR (non-PLAYOFFS) collection.
+			var regularNames = new HashSet<string>(
+				rows.Where(r => !IsPlayoffs(r) && !string.IsNullOrWhiteSpace(r.Name))
+					.Select(r => Norm(r.Name)));
+
+			// Names present in PLAYOFFS WITH a Trak Id (the official Trak playoffs product).
+			var playoffsWithTrakNames = new HashSet<string>(
+				rows.Where(r => IsPlayoffs(r) && r.TrakId.HasValue && !string.IsNullOrWhiteSpace(r.Name))
+					.Select(r => Norm(r.Name)));
+
+			int suffixCount = 0, skipCount = 0;
+			foreach (var r in rows)
+			{
+				if (!IsPlayoffs(r) || r.TrakId.HasValue || string.IsNullOrWhiteSpace(r.Name))
+					continue; // only no-Trak PLAYOFFS rows are candidates
+
+				string n = Norm(r.Name);
+				if (playoffsWithTrakNames.Contains(n))
+				{
+					r.SkipAsInternalDuplicate = true;
+					skipCount++;
+					log.Warning($"   SKIP (dirty data): PLAYOFFS row {r.ExcelRow} '{r.Name}' duplicates a Trak-linked PLAYOFFS item. Not creating. Confirm with Zach.");
+				}
+				else if (regularNames.Contains(n))
+				{
+					r.NeedsPlayoffsSuffix = true;
+					suffixCount++;
+					log.Step($"   SUFFIX: PLAYOFFS row {r.ExcelRow} '{r.Name}' -> '{r.EffectiveName}' (separate playoffs product).");
+				}
+				// else: PLAYOFFS-only with no regular twin -> AS-IS (name already indicates playoffs).
+			}
+
+			log.Info($"Playoffs classification -> suffix (separate product): {suffixCount} | skipped (dirty duplicates): {skipCount}");
+		}
+
+		// ==============================================================
 		//  Snapshot all inventory of a Season (single query, NoLock)
 		// ==============================================================
 		private static List<Entity> RetrieveSeasonInventory(CrmServiceClient svc, Guid seasonId)
@@ -457,7 +533,7 @@ namespace UpdateRateCard
 					string[] f =
 					{
 						e.Id.ToString(),
-						e.GetAttributeValue<int>("new_trakinventoryid").ToString(),
+						e.Contains("new_trakinventoryid") ? e.GetAttributeValue<int>("new_trakinventoryid").ToString() : "",
 						Csv(e.GetAttributeValue<string>("new_name")),
 						Money(e, "new_rate"), Money(e, "new_expense"),
 						Dec(e, "new_quantity"), Dec(e, "new_sold"), Dec(e, "new_unsold"),
@@ -498,11 +574,17 @@ namespace UpdateRateCard
 			foreach (var n in names) filter.AddCondition(CollectionNameField, ConditionOperator.Equal, n);
 			q.Criteria.AddFilter(filter);
 
+			// Guard: if a collection name resolves to >1 record (sandbox pollution),
+			// warn loudly — the match could be ambiguous. Sandbox should be clean (1 each).
 			foreach (var e in svc.RetrieveMultiple(q).Entities)
 			{
 				string nm = e.GetAttributeValue<string>(CollectionNameField);
 				if (string.IsNullOrWhiteSpace(nm)) continue;
-				map[Norm(nm)] = new EntityReference(CollectionEntity, e.Id) { Name = nm };
+				string k = Norm(nm);
+				if (map.ContainsKey(k))
+					log.Warning($"   DUPLICATE Collection record for '{nm}' — verify sandbox is clean before trusting the run.");
+				else
+					map[k] = new EntityReference(CollectionEntity, e.Id) { Name = nm };
 			}
 			return map;
 		}
@@ -511,7 +593,6 @@ namespace UpdateRateCard
 		{
 			var map = new Dictionary<string, EntityReference>();
 			if (names.Count == 0) return map;
-			// chunk OR-filters to stay well under condition limits
 			foreach (var chunk in Chunk(names, 200))
 			{
 				var q = new QueryExpression(ProductEntity) { ColumnSet = new ColumnSet(ProductNameField), NoLock = true };
@@ -523,7 +604,8 @@ namespace UpdateRateCard
 				{
 					string nm = e.GetAttributeValue<string>(ProductNameField);
 					if (string.IsNullOrWhiteSpace(nm)) continue;
-					map[Norm(nm)] = new EntityReference(ProductEntity, e.Id) { Name = nm };
+					if (!map.ContainsKey(Norm(nm)))
+						map[Norm(nm)] = new EntityReference(ProductEntity, e.Id) { Name = nm };
 				}
 			}
 			return map;
@@ -556,11 +638,12 @@ namespace UpdateRateCard
 			var upd = new Entity("new_inventory", cur.Id);
 			var changes = new List<string>();
 
-			// Name
-			if (!string.IsNullOrWhiteSpace(r.Name) &&
-				!Norm(r.Name).Equals(Norm(cur.GetAttributeValue<string>("new_name"))))
+			// Name (use EffectiveName so a suffixed playoffs item stays consistent)
+			string effName = r.EffectiveName;
+			if (!string.IsNullOrWhiteSpace(effName) &&
+				!Norm(effName).Equals(Norm(cur.GetAttributeValue<string>("new_name"))))
 			{
-				upd["new_name"] = r.Name; changes.Add("name");
+				upd["new_name"] = effName; changes.Add("name");
 			}
 
 			// Rate (Money)
@@ -584,7 +667,7 @@ namespace UpdateRateCard
 				changes.Add($"qty({r.Quantity.Value}),unsold({r.Quantity.Value - sold})");
 			}
 
-			// Collection (lookup)
+			// Collection (lookup) — compare by .Id only (never .Name)
 			if (coll != null)
 			{
 				var curColl = cur.GetAttributeValue<EntityReference>("new_collection");
@@ -608,8 +691,14 @@ namespace UpdateRateCard
 		private static Guid CreateNetNew(CrmServiceClient svc, InvRow r, EntityReference seasonRef,
 			EntityReference coll, bool isSourceSeason, Dictionary<string, EntityReference> productMap, Logger log)
 		{
+			// EffectiveName carries the "- Playoffs" suffix for separate-playoffs items.
+			// This is CRITICAL: creating the item AND product under the suffixed name means
+			// find-or-create makes a NEW product with no prior collection, so the
+			// "Set Collection-Division on Inventory" workflow has nothing to override.
+			string effName = r.EffectiveName;
+
 			var e = new Entity("new_inventory");
-			e["new_name"] = r.Name;
+			e["new_name"] = effName;
 			e["new_seasonid"] = seasonRef;
 			if (coll != null) e["new_collection"] = coll;
 			if (r.Rate.HasValue) e["new_rate"] = new Money(r.Rate.Value);
@@ -624,31 +713,30 @@ namespace UpdateRateCard
 			}
 
 			// Only carry the Trak Id when loading the SOURCE season (2026).
-			// For future years the file's Trak Ids belong to 2026, so we leave it null.
 			if (isSourceSeason && r.TrakId.HasValue) e["new_trakinventoryid"] = r.TrakId.Value;
 
-			// Product: find-or-create by name (new_productid is optional but we want it set)
-			if (!string.IsNullOrWhiteSpace(r.Name))
+			// Product: find-or-create by EFFECTIVE name (suffixed for playoffs -> distinct product)
+			if (!string.IsNullOrWhiteSpace(effName))
 			{
 				EntityReference prodRef;
-				if (productMap.TryGetValue(Norm(r.Name), out var existing))
+				if (productMap.TryGetValue(Norm(effName), out var existing))
 				{
 					prodRef = existing;
 				}
 				else
 				{
 					var prod = new Entity(ProductEntity);
-					prod[ProductNameField] = r.Name;
+					prod[ProductNameField] = effName;
 					Guid pid = svc.Create(prod);
-					prodRef = new EntityReference(ProductEntity, pid) { Name = r.Name };
-					productMap[Norm(r.Name)] = prodRef; // cache so duplicates in file reuse it
-					log.Step($"   + Product created '{r.Name}'");
+					prodRef = new EntityReference(ProductEntity, pid) { Name = effName };
+					productMap[Norm(effName)] = prodRef; // cache so duplicates in file reuse it
+					log.Step($"   + Product created '{effName}'");
 				}
 				e["new_productid"] = prodRef;
 			}
 
 			Guid id = svc.Create(e);
-			log.Step($"CREATED net-new '{r.Name}'{(r.IsUnlimited ? " [Unlimited qty]" : "")} -> {id}");
+			log.Step($"CREATED net-new '{effName}' [{(coll != null ? (coll.Name ?? coll.Id.ToString()) : "no coll")}]{(r.IsUnlimited ? " [Unlimited qty]" : "")} -> {id}");
 			return id;
 		}
 
@@ -687,9 +775,11 @@ namespace UpdateRateCard
 		private static string Csv(string s) => string.IsNullOrEmpty(s) ? "" : "\"" + s.Replace("\"", "\"\"") + "\"";
 
 		private static string Norm(string s) => (s ?? "").Trim().ToLowerInvariant();
-		// Within a season, inventory Name is NOT unique (PLAYOFFS duplicates regular items).
-		// Name+Collection is unique. Use it for matching and dedupe.
-		private static string InvKey(string name, string collection) => Norm(name) + "|" + Norm(collection);
+
+		// *** FIX A ***  Match key uses Collection GUID (always populated), NOT
+		// EntityReference.Name (not reliably populated by RetrieveMultiple).
+		private static string InvKeyId(string name, Guid? collectionId)
+			=> Norm(name) + "|" + (collectionId?.ToString("N") ?? "");
 
 		private static IEnumerable<List<T>> Chunk<T>(List<T> src, int size)
 		{
