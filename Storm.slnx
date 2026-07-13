@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/Consoles/">
+    <Project Path="Consoles/BackFillOppProdType/BackFillOppProdType.csproj" Id="98a6dc23-a1b4-4a7d-a054-a629719446e6" />
+    <Project Path="Consoles/CleanupDuplicateOpps/CleanupDuplicateOpps.csproj" Id="37e1087e-06a0-49e3-85f1-0544dfe8e0e8" />
     <Project Path="Consoles/CreateMassiveAccountsContactsOpp/CreateMassiveAccountsContactsOpp.csproj" Id="98973db5-79a2-45f3-8927-8f3457b51bc5" />
     <Project Path="Consoles/CreateMassiveOppFromLeads/CreateMassiveOppFromLeads.csproj" Id="ea273070-e35c-447e-a26f-67837dcc3bf9" />
     <Project Path="Consoles/CreateOppAndDealShell/CreateOppAndDealShell.csproj" Id="fa8e0be7-63df-4d53-971c-3593e019f7c2" />

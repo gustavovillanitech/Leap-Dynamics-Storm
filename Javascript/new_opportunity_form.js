@@ -246,6 +246,12 @@ OpportunityForm.setRequiredFields = function(formContext) {
                 isDetailRequired = true;
             }
         }
+        // RULE 4: Membership - New / Renewal require detail at Closed Won
+        if (!isDetailRequired &&
+            (prodType === 100000007 || prodType === 100000002) &&
+            stage === 100000005) {
+            isDetailRequired = true;
+        }
 
         detailAttr.setRequiredLevel(isDetailRequired ? "required" : "none");
     }
@@ -257,7 +263,7 @@ OpportunityForm.setRequiredFields = function(formContext) {
     if (sectionAttr) {
         var isSectionRequired = false;
 
-        // RULE 4: Ticketing - Premium Sales (100000004)
+        // RULE 4.1: Ticketing - Premium Sales (100000004)
         // Stage "2-Premium Pitched" (100000011) and later
         var premiumStages = [100000011, 100000012, 100000013, 100000005]; 
         if (oppType === 100000004 && premiumStages.indexOf(stage) > -1) {
@@ -311,7 +317,9 @@ OpportunityForm.filterProductDetail = function(formContext) {
         100000001: [100000003, 100000004, 100000005], 
         100000012: [100000006, 100000008, 100000009, 100000011, 100000012, 100000020, 100000021, 100000022, 100000023, 100000024, 100000025], //new_producttype = Premium Hospitality
         100000010: [100000013, 100000014, 100000015, 100000016, 100000017, 100000026], //FSE - Partial Plans
-        100000011: [100000018, 100000019] 
+        100000011: [100000018, 100000019],
+        100000007: [100000027], // Membership - New  -> Storm 360 Membership
+        100000002: [100000027]  // Membership - Renewal -> Storm 360 Membership
     };
     
     ctrl.clearOptions();
