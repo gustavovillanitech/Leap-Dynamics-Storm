@@ -18,6 +18,8 @@
     <File Path="Javascript/new_ContractDetails.js" />
     <File Path="Javascript/new_OpportunityQuickCreateLogic.js" />
     <File Path="Javascript/new_opportunity_form.js" />
+    <File Path="Javascript/PackageComponent.js" />
+    <File Path="Javascript/Product.js" />
   </Folder>
   <Folder Name="/Plugins/">
     <Project Path="Plugins/Pl.ActivityPointer.SyncTicketingStageFromOpportunity/Pl.ActivityPointer.SyncTicketingStageFromOpportunity.csproj" Id="ee2a3933-8ed6-4da3-8c23-f656ba98a075" />
@@ -30,5 +32,6 @@
     <Project Path="Plugins/Pl.Opportunity.CloseCorpPartnership/Pl.Opportunity.CloseCorpPartnership.csproj" Id="ccba0ba6-0be4-439f-a3e7-d211a4fd6c69" />
     <Project Path="Plugins/Pl.Opportunity.QuickActivityLogger/Pl.Opportunity.QuickActivityLogger.csproj" Id="e2e752e2-7231-4dcd-b863-73e08e632ef4" />
     <Project Path="Plugins/Pl.Opportunity.SetCPName/Pl.Opportunity.SetCPName.csproj" Id="443ac93e-9b1f-4c11-ad7c-5dd8d6fb59b5" />
+    <Project Path="Plugins/Pl.PackageComponent.SetName/Pl.PackageComponent.SetName.csproj" Id="1d7316d7-5d20-48cb-afcc-72ee6d5ab226" />
   </Folder>
 </Solution>
