@@ -15,6 +15,7 @@
   <Folder Name="/Javascript/">
     <File Path="Javascript/Deal.js" />
     <File Path="Javascript/Deallines.js" />
+    <File Path="Javascript/Inventory.js" />
     <File Path="Javascript/new_ContractDetails.js" />
     <File Path="Javascript/new_OpportunityQuickCreateLogic.js" />
     <File Path="Javascript/new_opportunity_form.js" />

@@ -1,0 +1,261 @@
+========================================================================
+Deal Line Builder — Package expansion (Power Fx)
+Screen: DealLinesInventoryPicker  |  Staging collection: colCart
+Reuses the existing colCart + btnAddToDeal. Only the pieces below are new.
+------------------------------------------------------------------------
+PREREQUISITES in the app (Data > Add data):
+  1. Add table  Package Components  (new_packagecomponent)
+  2. Ensure Products exposes  Is Package  (new_ispackage)
+
+NAMES TO CONFIRM (adjust to how they display in your app):
+  - Products flag ............ 'Is Package'      (new_ispackage)
+  - Package Components lookups  'Package Product', 'Component Product'
+  - Package Components fields .. 'Quantity', 'Is Anchor'
+========================================================================
+
+
+-- 0) OnVisible of the screen: default the mode to Inventory ------------
+-- IMPORTANT: Set(varMode,"Inventory") must be OUTSIDE the
+-- If(!IsBlank(ModelDrivenFormIntegration.Item), ...) guard. In embedded apps the
+-- form Item is blank on first load, so if the Set is inside the guard, varMode
+-- stays blank -> both toggle buttons render gray and the search box is hidden.
+Set(varMode, "Inventory");   // always, independent of whether the deal Item is ready
+If(
+    !IsBlank(ModelDrivenFormIntegration.Item),
+    Set(varDeal, ModelDrivenFormIntegration.Item);
+    Set(varSeasonId, varDeal.Season.Season)
+);
+Clear(colCart);
+Set(varResetRates, false);
+
+-- Timing-proof hardening (optional but recommended): treat blank varMode as
+-- Inventory by using  varMode <> "Packages"  (instead of = "Inventory") on:
+--   btnBrowseInventory.Fill / .Color, txtSearch.Visible, ddCollection.Visible,
+--   ddDivision.Visible, lblCollectionTitle.Visible, lblDivisionTitle.Visible.
+-- Package controls keep  varMode = "Packages".
+
+
+-- 0b) SEASON CHANGE: clear the cart (staged lines are season-specific) --
+-- Without this, switching the Season dropdown leaves the previous season's
+-- items in colCart while the combo shows a different season -> inconsistent
+-- state, and Add Package for a new season would mix seasons in one deal.
+ddSeason.OnChange:
+   Clear(colCart);
+   Clear(colCartInv);
+   Set(varMsg, "");
+   Reset(txtPkgDiscount);
+   Reset(cbPackage)      // clear the stale package selection so Package price/Diff reset too
+
+
+-- 1) TOGGLE (two buttons) ----------------------------------------------
+btnBrowseInventory.OnSelect:
+   Set(varMode, "Inventory")
+
+btnBrowsePackages.OnSelect:
+   Set(varMode, "Packages")
+
+galInventory.Visible:
+   varMode = "Inventory"
+
+// package controls below all use: Visible = varMode = "Packages"
+
+
+-- 2) PACKAGE PICKER (dropdown/combobox ddPackage) ----------------------
+// Packages are inventory rows whose product is a package, for the deal's season.
+ddPackage.Items:
+   Filter(
+       Inventories,
+       'Season Id'.Name = ddSeason.Selected.Name,
+       'Product Id'.'Is Package' = true
+   )
+// Combobox: set the display column to Name.
+// ddPackage.Selected is the package's Inventory row:
+//   - package product  = ddPackage.Selected.'Product Id'
+//   - package price     = ddPackage.Selected.'Rate Card'
+
+
+-- 3) ADD PACKAGE -> explode components into colCart --------------------
+-- THREE dead-ends we hit and why this final version works:
+--   (a) Navigating the PK inside a delegated Filter
+--       ('Package Product'.'Product ID' = ...) throws at runtime:
+--       "Could not find a property named 'new_ProductId' on type
+--        new_packagecomponent"  (the table has TWO lookups to new_product,
+--        Dataverse can't resolve which navigation to push down).
+--   (b) Comparing lookup == lookup ('Package Product' = pkgProd) is rejected
+--       at author time: "Incompatible types for comparison: Record, Record".
+--   (c) AddColumns(..., 'Package Product'.'Product ID') fails to author:
+--       "AddColumns has some invalid arguments" (it can't take lookup
+--        navigation as a column expression -> the new column comes back as
+--        an Error type and everything downstream breaks).
+-- SOLUTION: build FLAT in-memory collections with ForAll projection (ForAll
+-- pulls rows then evaluates navigation client-side, which works), then match
+-- GUID == GUID over the collections. No delegation, no record comparison,
+-- no AddColumns.
+btnAddPackage.OnSelect:
+   // 0) Clear any previous message (shown via lblMsg / varMsg, see below)
+   Set(varMsg, "");
+
+   // 1) Load into memory as FLAT collections (ForAll projects client-side)
+   ClearCollect(
+       colAllPkgComp,
+       ForAll(
+           'Package Components' As pc,
+           {
+               pkgProdId:    pc.'Package Product'.'Product ID',
+               compProdId:   pc.'Component Product'.'Product ID',
+               compProdName: pc.'Component Product'.Name,
+               qty:          pc.Quantity
+           }
+       )
+   );
+   ClearCollect(
+       colSeasonInv,
+       ForAll(
+           Filter(Inventories, 'Season Id'.Name = ddSeason.Selected.Name) As iv,
+           {
+               invId:    iv.Inventory,
+               invName:  iv.Name,
+               rateCard: iv.'Rate Card',
+               prodId:   iv.'Product Id'.'Product ID'
+           }
+       )
+   );
+
+   // 2) Explode by GUID match, all in memory
+   With(
+       { selPkgId: cbPackage.Selected.'Product Id'.'Product ID' },
+       ForAll(
+           Filter(colAllPkgComp, pkgProdId = selPkgId) As comp,
+           With(
+               { inv: LookUp(colSeasonInv, prodId = comp.compProdId) },
+               If(
+                   !IsBlank(inv) && IsBlank(LookUp(colCart, inventoryId = inv.invId)),
+                   Collect(
+                       colCart,
+                       {
+                           inventoryId:   inv.invId,
+                           inventoryName: inv.invName,
+                           rateCard:      inv.rateCard,
+                           rate:          inv.rateCard,     // unit rate (edit / discount later)
+                           quantity:      comp.qty,
+                           discount:      0,
+                           productId:     inv.prodId,
+                           packageName:   cbPackage.Selected.Name
+                       }
+                   ),
+                   If( IsBlank(inv),
+                       Collect(colSkipped, { item: comp.compProdName })
+                   )
+               )
+           )
+       )
+   );
+
+   // 3) Flag components with no inventory for the season.
+   //    Use a custom label (lblMsg bound to varMsg) instead of Notify(), because
+   //    the Notify banner always renders at the top and overlaps the toggle buttons.
+   //    lblMsg is positioned to the right of btnBrowsePackages. Also Set(varMsg,"")
+   //    at the START of this OnSelect and in ddSeason.OnChange to clear it.
+   If(
+       CountRows(colSkipped) > 0,
+       Set(
+           varMsg,
+           "Skipped (no inventory this season): " & Concat(colSkipped, item, ", ")
+       )
+   );
+   Clear(colSkipped);
+
+-- lblMsg (custom message label, not a Notify banner so it won't overlap buttons) --
+-- Option A - BELOW the toggle buttons (recommended):
+--   X:       btnBrowseInventory.X
+--   Y:       btnBrowseInventory.Y + btnBrowseInventory.Height + 4
+--   Height:  20
+--   Width:   Parent.Width - Self.X - 20
+-- Option B - to the RIGHT of Browse Packages:
+--   X:       btnBrowsePackages.X + btnBrowsePackages.Width + 15
+--   Y:       btnBrowsePackages.Y
+--   Height:  btnBrowsePackages.Height
+-- Common:
+--   Text:    varMsg
+--   Visible: !IsBlank(varMsg)
+--   Color:   RGBA(178, 59, 59, 1)
+--   Size:    10
+
+   // 4) Materialize the cart as Inventories records (same schema the gallery
+   //    cells expect: ThisItem.Name, .'Rate Card', .Inventory, etc.). Targeted
+   //    LookUps avoid the page-scan/delegation problem that leaves the gallery
+   //    empty when filtering Inventories by an in-memory colCart.
+   ClearCollect(
+       colCartInv,
+       ForAll(colCart As c, LookUp(Inventories, Inventory = c.inventoryId))
+   );
+
+
+-- 3b) GALLERY ITEMS (galInventory.Items) -------------------------------
+-- Packages branch must point to colCartInv (real Inventories records), NOT a
+-- Filter(Inventories, ..., LookUp(colCart)) which does not delegate and comes
+-- back empty. The cells key off ThisItem.Inventory + colCart, so they render
+-- rate/qty/discount correctly for either source.
+galInventory.Items:
+   If(
+       varMode = "Packages",
+       colCartInv,
+       If(
+           IsBlank([@ModelDrivenFormIntegration].Item) || IsBlank(ddSeason.Selected.Name),
+           Blank(),
+           Filter(
+               Inventories,
+               'Season Id'.Name = ddSeason.Selected.Name,
+               'Is Package' <> true,
+               IsBlank(txtSearch.Text) || txtSearch.Text in Name,
+               IsBlank(ddCollection.Selected.Value) || Collection.Name = ddCollection.Selected.Value,
+               IsBlank(ddDivision.Selected.Value) || Division.Name = ddDivision.Selected.Value
+           )
+       )
+   )
+
+
+-- 4) LIVE TOTALS (labels, Visible = varMode="Packages") ----------------
+lblComponentsTotal.Text:
+   "Components total: " & Text(Sum(colCart, rate * quantity), "[$-en-US]$#,##0")
+
+lblPackagePrice.Text:
+   "Package price: " & Text(ddPackage.Selected.'Rate Card', "[$-en-US]$#,##0")
+
+lblDifference.Text:
+   "Difference: " &
+   Text(Sum(colCart, rate * quantity) - ddPackage.Selected.'Rate Card', "[$-en-US]+$#,##0;-$#,##0")
+
+// optional: color red when over
+lblDifference.Color:
+   If( Sum(colCart, rate * quantity) > ddPackage.Selected.'Rate Card',
+       RGBA(178,59,59,1), RGBA(50,49,48,1) )
+
+
+-- 5) PACKAGE DISCOUNT % + APPLY ----------------------------------------
+// txtPkgDiscount = number input;  btnApplyPkgDiscount = button
+btnApplyPkgDiscount.OnSelect:
+   UpdateIf(
+       colCart,
+       packageName = ddPackage.Selected.Name,
+       {
+           rate:     rateCard * (1 - Value(txtPkgDiscount.Text) / 100),
+           discount: Value(txtPkgDiscount.Text)
+       }
+   )
+
+
+-- 6) KEEP colCart SCHEMA CONSISTENT -------------------------------------
+// Add packageName to the existing chkSelect.OnCheck Collect so every
+// colCart row has the field (regular items get ""). Add this line to the record:
+//     packageName: ""
+
+
+-- 7) NAME OF THE DEAL LINES (btnAddToDeal) -----------------------------
+// In btnAddToDeal.OnSelect, replace the Name line inside the Patch with:
+Name: If(
+    !IsBlank(packageName),
+    inventoryName & " - " & packageName,                       // [Item] - [Package]
+    varDealRecord.'Deal Name' & " - " & inventoryName          // existing behavior
+),
+========================================================================

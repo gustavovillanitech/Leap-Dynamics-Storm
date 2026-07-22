@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Query;
 using System;
 
 namespace Pl.Inventory.TotalCalculatedField
@@ -59,6 +60,20 @@ namespace Pl.Inventory.TotalCalculatedField
 					inventory["new_total"] = new Money(totalCalculation);
 
 					tracingService.Trace("Total calculation successful: {0}", totalCalculation);
+					
+					// Mirror 'Is Package' from the related Product (keeps inventory in sync with the product flag)
+					EntityReference productRef = null;
+					if (inventory.Contains("new_productid") && inventory["new_productid"] != null)
+						productRef = inventory.GetAttributeValue<EntityReference>("new_productid");
+					else if (context.PreEntityImages.Contains("PreImage") && context.PreEntityImages["PreImage"].Contains("new_productid"))
+						productRef = context.PreEntityImages["PreImage"].GetAttributeValue<EntityReference>("new_productid");
+					
+					if (productRef != null)
+					{
+						Entity product = service.Retrieve("new_product", productRef.Id, new ColumnSet("new_ispackage"));
+						inventory["new_ispackage"] = product.GetAttributeValue<bool>("new_ispackage");
+						tracingService.Trace("Is Package mirrored from product: {0}", inventory["new_ispackage"]);
+					}
 				}
 				catch (Exception ex)
 				{

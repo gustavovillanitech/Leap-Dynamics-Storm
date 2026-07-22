@@ -287,7 +287,7 @@ DealForm.fixCanvasAppHeight = function (executionContext) {
         style.id = "canvas-height-fix";
         style.innerHTML =
             "[data-lp-id='MscrmControls.Containers.FieldSectionItem|new_appcontroldeallinebuilder|new_deals'] " +
-            "{ height: 480px !important; max-height: 480px !important; overflow: hidden !important; }";
+            "{ height: 450px !important; max-height: 450px !important; overflow: hidden !important; }";
         mainDocument.head.appendChild(style);
     } catch (e) { console.error(e); }
 };
