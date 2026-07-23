@@ -11,6 +11,7 @@
     <Project Path="Consoles/TrakImport/TrakImport.csproj" />
     <Project Path="Consoles/UpdateActualRevenueOpportunities/UpdateActualRevenueOpportunities.csproj" Id="81c76b95-3345-4d5c-8de7-4305b34903db" />
     <Project Path="Consoles/UpdateRateCard/UpdateRateCard.csproj" Id="ae4692a7-4e33-4bd3-98db-e821cf25e5bf" />
+    <Project Path="Consoles/UpdateRateCardv2/UpdateRateCardv2.csproj" Id="e07f4ced-6c8f-41c7-baae-de41fcb044ed" />
   </Folder>
   <Folder Name="/Javascript/">
     <File Path="Javascript/Deal.js" />
