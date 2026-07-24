@@ -77,7 +77,7 @@ namespace UpdateRateCardv2
         private const string RedirectUri = "app://58145B91-0C36-4500-8554-080854F2AC97";
 
         // true = preview + report only, NO CRM writes. false = actually load (still asks YES).
-        private const bool DryRun = true;
+        private const bool DryRun = false;
 
         private const string ExcelPath =
             @"C:\Code\Storm\Deal Options And PlayOff Automation\UpdateRateCard\2026 Rate Card with Packages FINAL V2.xlsx";
@@ -93,6 +93,10 @@ namespace UpdateRateCardv2
         private const string ProductEntity = "new_product";
         private const string ProductNameField = "new_name";
         private const string IsPackageField = "new_ispackage";              // bool on product AND inventory (mirror)
+        private const string DivisionEntity = "new_division";
+        private const string DivisionNameField = "new_name";
+        private const string DivisionIdField = "new_divisionid";
+        private const string DivisionName = "Storm";                        // all inventory belongs to this division (Zach)
         private const string PkgComponentEntity = "new_packagecomponent";
         private const string PkgComponentPackage = "new_packageproduct";    // lookup -> new_product (the package)
         private const string PkgComponentComponent = "new_componentproduct";// lookup -> new_product (the component)
@@ -151,6 +155,11 @@ namespace UpdateRateCardv2
         // Package products created/known this run: package name (norm) -> product ref
         private static readonly Dictionary<string, EntityReference> ProductCache =
             new Dictionary<string, EntityReference>(StringComparer.OrdinalIgnoreCase);
+
+        // The "Storm" division (lookup target), resolved once after connect. Set directly on each
+        // inventory row: products are created with no division, so the Set-Collection-Division
+        // workflow has nothing to inherit and will not overwrite what we set here.
+        private static EntityReference _division;
 
         static void Main(string[] args)
         {
@@ -239,6 +248,15 @@ namespace UpdateRateCardv2
                     svc = new CrmServiceClient(conn);
                     if (!svc.IsReady) { Log($"[ERROR] Connection failed: {svc.LastCrmError}"); Pause(); return; }
                     Log($"Connected. Org: {svc.ConnectedOrgUniqueName}");
+
+                    // Resolve the Storm division once (set on every inventory row).
+                    _division = ResolveByName(svc, DivisionEntity, DivisionNameField, DivisionIdField, DivisionName);
+                    if (_division == null)
+                    {
+                        Log($"[WARNING] Division '{DivisionName}' not found - inventory will be created without a division.");
+                        Rep("(division)", "", "Note", $"Division '{DivisionName}' not found; inventory left with no division");
+                    }
+                    else Log($"Division resolved: {DivisionName}");
                 }
                 else Log("DRY RUN: skipping connection. Report shows intended actions only.");
 
@@ -253,13 +271,18 @@ namespace UpdateRateCardv2
                     if (seasonRef == null) { Log($"[ERROR] Season '{TargetSeason}' not found. Aborting."); Pause(); return; }
 
                     collMap = ResolveCollections(svc, distinctColls);
-                    var missing = distinctColls.Where(c => !collMap.ContainsKey(Norm(c))).ToList();
-                    foreach (var m in missing) Rep("(collection)", m, "BLOCKER", "Collection missing in CRM - create it or fix the name before loading");
-                    if (missing.Count > 0)
+                    // Auto-create any collection the rate card needs that doesn't exist yet.
+                    // new_collection only requires new_name (no division field). Full-replace makes this
+                    // safe: all inventory was wiped, so there is nothing to duplicate/orphan.
+                    foreach (var collName in distinctColls)
                     {
-                        Log($"[ERROR] {missing.Count} collection(s) missing in CRM. Aborting before any write. See report.");
-                        Log($"Report -> {Path.GetFileName(WriteReport(outDir, stamp, report, distinctColls))}");
-                        Pause(); return;
+                        if (collMap.ContainsKey(Norm(collName))) continue;
+                        var c = new Entity(CollectionEntity);
+                        c[CollectionNameField] = collName;
+                        Guid cid = svc.Create(c);
+                        collMap[Norm(collName)] = new EntityReference(CollectionEntity, cid) { Name = collName };
+                        Rep("(collection)", collName, "Note", "auto-created new collection");
+                        Log($"   + Collection created '{collName}'");
                     }
 
                     // ── 4. Snapshot + backup ──────────────────────────
@@ -566,7 +589,7 @@ namespace UpdateRateCardv2
         private static List<Entity> RetrieveSeasonInventory(CrmServiceClient svc, Guid seasonId)
         {
             var cols = new ColumnSet("new_inventoryid", "new_name", "new_rate", "new_expense",
-                "new_quantity", "new_sold", "new_unsold", "new_collection", "new_productid", "new_seasonid", IsPackageField);
+                "new_quantity", "new_sold", "new_unsold", "new_collection", "new_division", "new_productid", "new_seasonid", IsPackageField);
             var q = new QueryExpression("new_inventory") { ColumnSet = cols, NoLock = true, PageInfo = new PagingInfo { Count = 5000, PageNumber = 1 } };
             q.Criteria.AddCondition("new_seasonid", ConditionOperator.Equal, seasonId);
             var all = new List<Entity>();
@@ -599,6 +622,11 @@ namespace UpdateRateCardv2
                 if (curColl == null || curColl.Id != coll.Id) { upd["new_collection"] = coll; changes.Add("collection"); }
             }
             if (r.IsPackage && cur.GetAttributeValue<bool>(IsPackageField) != true) { upd[IsPackageField] = true; changes.Add("ispackage"); }
+            if (_division != null)
+            {
+                var curDiv = cur.GetAttributeValue<EntityReference>("new_division");
+                if (curDiv == null || curDiv.Id != _division.Id) { upd["new_division"] = _division; changes.Add("division"); }
+            }
 
             if (upd.Attributes.Count == 0) return changes;
             svc.Update(upd);
@@ -619,6 +647,7 @@ namespace UpdateRateCardv2
                 e["new_sold"] = 0m; e["new_pitched"] = 0m; e["new_allocated"] = 0m;
             }
             if (r.IsPackage) e[IsPackageField] = true; // also mirrored from product by the plugin
+            if (_division != null) e["new_division"] = _division; // Storm (product has none -> workflow won't override)
 
             // Product: find-or-create by name; packages get new_ispackage = true so the mirror is correct.
             e["new_productid"] = FindOrCreateProduct(svc, r.Name, isPackage: r.IsPackage);
