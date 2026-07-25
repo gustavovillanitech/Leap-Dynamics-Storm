@@ -69,8 +69,8 @@ namespace UpdateRateCardv2
         // ==============================================================
         //  CONFIGURATION - VERIFY BEFORE EVERY RUN
         // ==============================================================
-        //private const string EnvUrl = "https://stormbasketball.crm.dynamics.com/"; // PRODUCTION
-        private const string EnvUrl = "https://org00bff505.crm.dynamics.com/";        // <-- SANDBOX first!
+        private const string EnvUrl = "https://stormbasketball.crm.dynamics.com/"; // PRODUCTION
+        //private const string EnvUrl = "https://org00bff505.crm.dynamics.com/";        // <-- SANDBOX first!
         private const string CrmUsername = "FanInteractive@stormbasketball.com";
         private const string CrmPassword = "CsCXbm2E-WtQ3c4DCy2!";
         private const string AppId = "51f81489-12ee-4a9e-aaae-a2591f45987d";
@@ -136,6 +136,24 @@ namespace UpdateRateCardv2
 
         private static readonly HashSet<string> DeferredPackages =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "presenting partner - playoffs" };
+
+        // Component "Closest Match" -> actual inventory/product name (Zack's email, 2026-07-24).
+        // Zack gave the target rows instead of editing Package Detail: r102 item is misspelled "Free Thow Line".
+        private static readonly Dictionary<string, string> ComponentAlias =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "free throw line", "Free Thow Line" },        // row 102 (item name is misspelled in the file)
+                { "pre-game reads", "PA Read - Pre-Game" },      // row 88
+                { "player appearances a list", "Player Appearances" }, // row 73
+            };
+
+        // Components that are themselves packages -> leave off per Zack ("people add them manually").
+        private static readonly HashSet<string> ComponentSkip =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "entitlement game - presenting partner",
+                "entitlement game - supporting partner",
+            };
 
         // ==============================================================
         internal class InvRow
@@ -367,9 +385,15 @@ namespace UpdateRateCardv2
                             if (string.IsNullOrWhiteSpace(cp.Match))
                             { Rep(r.Name, r.Collection, "PkgDefExc", $"component '{cp.Sub}' has no Closest Match - cannot link"); linkExc++; continue; }
 
-                            EntityReference compProd = ResolveByName(svc, ProductEntity, ProductNameField, "new_productid", cp.Match);
+                            // A package listed as a component -> left off per Zack (added manually).
+                            if (ComponentSkip.Contains(Norm(cp.Match)))
+                            { Rep(r.Name, r.Collection, "PkgDefExc", $"'{cp.Match}' is a package - left off per Zack (manual add)"); continue; }
+
+                            // Resolve the component product, applying Zack's name mapping where given.
+                            string matchName = ComponentAlias.TryGetValue(Norm(cp.Match), out var alias) ? alias : cp.Match;
+                            EntityReference compProd = ResolveByName(svc, ProductEntity, ProductNameField, "new_productid", matchName);
                             if (compProd == null)
-                            { Rep(r.Name, r.Collection, "PkgDefExc", $"component product not found: '{cp.Match}'"); linkExc++; continue; }
+                            { Rep(r.Name, r.Collection, "PkgDefExc", $"component product not found: '{matchName}'"); linkExc++; continue; }
                             if (existing.Contains(compProd.Id))
                             { linkSkipped++; continue; } // idempotent
 
