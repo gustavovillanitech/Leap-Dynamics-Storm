@@ -9,6 +9,10 @@
  *   relevant business field is the price (Rate Card) plus its context
  *   (Product, Season, Name, Description).
  *
+ *   For a PACKAGE, Season Id and Rate Card are also made REQUIRED: the Deal Line
+ *   Builder only lists a package when its inventory has both a Season and a Rate
+ *   Card value, so we block saving a package inventory without them.
+ *
  * How "is package" is determined:
  *   - new_ispackage is a mirror field on inventory, populated by the
  *     Pl.Inventory.TotalCalculatedField plugin on save (copied from the product).
@@ -37,6 +41,13 @@ InventoryForm.PACKAGE_HIDDEN_FIELDS = [
     "new_pitched",
     "new_allocated",
     "new_unsold"
+];
+
+// Fields REQUIRED when the inventory row is a package (needed for it to show in
+// the Deal Line Builder). Reverted to "none" when it is not a package.
+InventoryForm.PACKAGE_REQUIRED_FIELDS = [
+    "new_seasonid",   // Season Id
+    "new_rate"        // Rate Card
 ];
 
 InventoryForm.onLoad = function (executionContext) {
@@ -98,5 +109,15 @@ InventoryForm.applyPackageLayout = function (formContext, isPackage) {
         attr.controls.forEach(function (ctrl) {
             ctrl.setVisible(!isPackage);
         });
+    });
+
+    // Require Season Id + Rate Card for packages so they can't be saved blank
+    // (the Deal Line Builder won't list a package that is missing either one).
+    InventoryForm.PACKAGE_REQUIRED_FIELDS.forEach(function (fieldName) {
+        var attr = formContext.getAttribute(fieldName);
+        if (!attr) {
+            return;
+        }
+        attr.setRequiredLevel(isPackage ? "required" : "none");
     });
 };

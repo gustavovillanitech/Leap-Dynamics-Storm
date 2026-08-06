@@ -317,7 +317,7 @@ OpportunityForm.filterProductDetail = function(formContext) {
         100000001: [100000003, 100000004, 100000005], 
         100000012: [100000006, 100000008, 100000009, 100000011, 100000012, 100000020, 100000021, 100000022, 100000023, 100000024, 100000025], //new_producttype = Premium Hospitality
         100000010: [100000013, 100000014, 100000015, 100000016, 100000017, 100000026], //FSE - Partial Plans
-        100000011: [100000018, 100000019],
+        100000011: [100000018, 100000019, 100000028], //FSE - Flexible Plans -> incluye Category 4 Plan
         100000007: [100000027], // Membership - New  -> Storm 360 Membership
         100000002: [100000027]  // Membership - Renewal -> Storm 360 Membership
     };

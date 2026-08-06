@@ -103,6 +103,12 @@ namespace UpdateRateCardv2
         private const string PkgComponentQty = "new_quantity";
         private const string PkgComponentAnchor = "new_isanchor";
 
+        // "Package Premium" line added to every package (Zack request, 2026-07-24): blank rate, qty 1.
+        private const bool AddPremiumToEveryPackage = true;
+        private const string PremiumName = "Package Premium";
+        private const string PremiumCollection = "Other";
+        private const decimal PremiumQty = 1m;
+
         // Inventory Rate Card columns (1-based)
         private const int C_NAME = 1;
         private const int C_PACKAGE = 2;   // "1" => the item IS a package
@@ -415,6 +421,65 @@ namespace UpdateRateCardv2
                     }
                 }
                 Log(DryRun ? "DRY RUN: package component links previewed." : $"PHASE B done. links created:{linkCreated} skipped(existing):{linkSkipped} exceptions:{linkExc}");
+
+                // ── 6c. PHASE C: add a "Package Premium" line to every package ──
+                if (AddPremiumToEveryPackage)
+                {
+                    var pkgRows = loadable.Where(x => x.IsPackage).ToList();
+                    if (DryRun)
+                    {
+                        Rep(PremiumName, PremiumCollection, "Note",
+                            $"would create '{PremiumName}' (qty {PremiumQty}, blank rate) and add it to {pkgRows.Count} packages");
+                        Log($"DRY RUN: would add '{PremiumName}' to {pkgRows.Count} packages.");
+                    }
+                    else
+                    {
+                        // Collection for the premium item (create if the run didn't already).
+                        EntityReference premColl;
+                        if (collMap.TryGetValue(Norm(PremiumCollection), out var pc)) premColl = pc;
+                        else
+                        {
+                            var cc = new Entity(CollectionEntity); cc[CollectionNameField] = PremiumCollection;
+                            premColl = new EntityReference(CollectionEntity, svc.Create(cc)) { Name = PremiumCollection };
+                            collMap[Norm(PremiumCollection)] = premColl;
+                        }
+
+                        // Product (non-package) + inventory row (blank rate, qty 1).
+                        EntityReference premProd = FindOrCreateProduct(svc, PremiumName, isPackage: false);
+                        string premKey = InvKey(PremiumName, premColl.Id);
+                        if (!byKey.ContainsKey(premKey))
+                        {
+                            var pe = new Entity("new_inventory");
+                            pe["new_name"] = PremiumName;
+                            pe["new_seasonid"] = seasonRef;
+                            pe["new_collection"] = premColl;
+                            pe["new_quantity"] = PremiumQty;
+                            pe["new_unsold"] = PremiumQty; pe["new_sold"] = 0m; pe["new_pitched"] = 0m; pe["new_allocated"] = 0m;
+                            if (_division != null) pe["new_division"] = _division;
+                            pe["new_productid"] = premProd;
+                            // new_rate intentionally left blank
+                            byKey[premKey] = new Entity("new_inventory", svc.Create(pe)) { ["new_name"] = PremiumName };
+                            Rep(PremiumName, PremiumCollection, "Created", "Package Premium item (blank rate)", null, PremiumQty);
+                        }
+
+                        // Attach as a component (qty 1) to every loaded package - idempotent.
+                        int premLinks = 0, premSkip = 0;
+                        foreach (var r in pkgRows)
+                        {
+                            EntityReference pkgProd = FindOrCreateProduct(svc, r.Name, isPackage: true);
+                            if (GetExistingComponentProductIds(svc, pkgProd.Id).Contains(premProd.Id)) { premSkip++; continue; }
+                            var pck = new Entity(PkgComponentEntity);
+                            pck[PkgComponentPackage] = pkgProd;
+                            pck[PkgComponentComponent] = premProd;
+                            pck[PkgComponentQty] = PremiumQty;
+                            pck[PkgComponentAnchor] = false;
+                            svc.Create(pck);
+                            premLinks++;
+                        }
+                        Log($"PHASE C done. '{PremiumName}' linked to {premLinks} packages (skipped {premSkip} already linked).");
+                        Rep(PremiumName, PremiumCollection, "Note", $"linked to {premLinks} packages (skipped {premSkip} already linked)");
+                    }
+                }
 
                 // ── 7. Excel report ───────────────────────────────────
                 string reportPath = WriteReport(outDir, stamp, report, distinctColls);
