@@ -1,0 +1,4196 @@
+1
+00:00:00,000 --> 00:00:05,000
+on point and or if there's additional suggestions
+
+2
+00:00:05,000 --> 00:00:07,880
+that you may have, we obviously welcome that.
+
+3
+00:00:07,880 --> 00:00:11,020
+And then I think you know this as I was out,
+
+4
+00:00:11,020 --> 00:00:13,400
+but Chrissy and I did one yesterday, we put a deal in,
+
+5
+00:00:13,400 --> 00:00:17,240
+but most of the deals at this point are entered in.
+
+6
+00:00:17,240 --> 00:00:19,200
+You know, I think Chrissy and maybe you can speak
+
+7
+00:00:19,200 --> 00:00:24,200
+to sort of the accuracy from those inputs.
+
+8
+00:00:25,120 --> 00:00:28,240
+And so now we're kind of like, okay, what's next?
+
+9
+00:00:28,240 --> 00:00:30,120
+You know, we've got like a running list of tweaks
+
+10
+00:00:30,120 --> 00:00:32,280
+and changes that we noticed as we worked through that,
+
+11
+00:00:32,280 --> 00:00:33,640
+that we're gonna talk with you about
+
+12
+00:00:33,640 --> 00:00:34,600
+we obviously sent over.
+
+13
+00:00:34,600 --> 00:00:38,160
+So I think high level, that's sort of my,
+
+14
+00:00:39,360 --> 00:00:41,560
+you know, my assessment of where we're at,
+
+15
+00:00:41,560 --> 00:00:42,920
+but Chrissy and I also has been in this,
+
+16
+00:00:42,920 --> 00:00:46,160
+so I'd love Chrissy in for you to share too.
+
+17
+00:00:46,160 --> 00:00:48,200
+Yeah, I mean, I think what you said
+
+18
+00:00:48,200 --> 00:00:51,240
+is very accurate, high level overview.
+
+19
+00:00:51,240 --> 00:00:54,040
+And then I think Ray and I think Gustavo,
+
+20
+00:00:54,040 --> 00:00:56,240
+you were on some of the calls with Zach and I
+
+21
+00:00:56,240 --> 00:00:59,920
+last week when we were in the midst of all the auditing
+
+22
+00:00:59,920 --> 00:01:02,960
+after the team built them, very close.
+
+23
+00:01:04,120 --> 00:01:06,720
+I think I have just one more to build today
+
+24
+00:01:06,720 --> 00:01:10,000
+and then the 26 deals will be complete.
+
+25
+00:01:10,000 --> 00:01:14,200
+So like Nate said, I think as soon as that Amazon
+
+26
+00:01:14,200 --> 00:01:17,880
+OVG one is done, then I think we can really
+
+27
+00:01:17,880 --> 00:01:19,120
+start cleaning up.
+
+28
+00:01:19,120 --> 00:01:23,560
+There are some like random second 20, 26 deals.
+
+29
+00:01:23,560 --> 00:01:26,800
+I noticed some of those things.
+
+30
+00:01:26,800 --> 00:01:30,040
+So I think we tried to put that feedback together
+
+31
+00:01:30,040 --> 00:01:33,760
+in the Excel document that I sent over yesterday.
+
+32
+00:01:34,760 --> 00:01:37,000
+I know we shared that before and then Zach
+
+33
+00:01:37,000 --> 00:01:40,580
+tried to help us prioritize some of those things.
+
+34
+00:01:42,040 --> 00:01:45,240
+Yeah, I sent a note to Gustavo earlier.
+
+35
+00:01:45,240 --> 00:01:48,120
+So I know we're working through your Excel list.
+
+36
+00:01:49,160 --> 00:01:52,400
+So, you know, the easy stuff is the account
+
+37
+00:01:52,400 --> 00:01:55,760
+opportunity cleanup that's pretty simple on our end.
+
+38
+00:01:58,240 --> 00:02:00,120
+We will look into the deal totals.
+
+39
+00:02:00,120 --> 00:02:03,680
+I know, like it's funny how every time we troubleshoot
+
+40
+00:02:03,680 --> 00:02:05,240
+it seems like it's calculating,
+
+41
+00:02:05,240 --> 00:02:09,280
+but we will do a hot it now that like everything's
+
+42
+00:02:09,280 --> 00:02:12,240
+mostly complete and make sure all the totals
+
+43
+00:02:12,240 --> 00:02:13,080
+are adding up.
+
+44
+00:02:13,080 --> 00:02:14,880
+So we'll take that on.
+
+45
+00:02:15,640 --> 00:02:18,400
+I think some of the other stuff we will,
+
+46
+00:02:18,400 --> 00:02:21,000
+I haven't had a chance to like dive into
+
+47
+00:02:21,000 --> 00:02:23,720
+too much detail yet, but I know Gustavo
+
+48
+00:02:23,720 --> 00:02:25,520
+and I will kind of dive into those.
+
+49
+00:02:25,520 --> 00:02:28,760
+So the training material, that's pretty easy.
+
+50
+00:02:28,760 --> 00:02:30,800
+We can get that up and running.
+
+51
+00:02:30,800 --> 00:02:33,120
+Maybe once we kind of like finalize
+
+52
+00:02:33,120 --> 00:02:35,000
+and get some of these things built out,
+
+53
+00:02:35,000 --> 00:02:36,480
+but we can definitely see that.
+
+54
+00:02:38,000 --> 00:02:39,440
+That's nice, thank you.
+
+55
+00:02:39,440 --> 00:02:43,440
+Yeah, I guess just anecdotally
+
+56
+00:02:43,440 --> 00:02:46,640
+why you guys have been doing deals over the last week.
+
+57
+00:02:46,640 --> 00:02:50,680
+You used to more so steam like process wise,
+
+58
+00:02:50,680 --> 00:02:54,560
+like everything sort of mostly makes sense.
+
+59
+00:02:54,560 --> 00:02:56,240
+You know, even if there are a few hiccups
+
+60
+00:02:56,240 --> 00:02:57,800
+or a few things you want to tweak.
+
+61
+00:02:58,840 --> 00:02:59,840
+Yeah, I think so.
+
+62
+00:03:01,240 --> 00:03:02,920
+I was telling Nate when we were going
+
+63
+00:03:02,920 --> 00:03:05,480
+through the training yesterday.
+
+64
+00:03:05,480 --> 00:03:06,760
+Sorry, I'm looking at my other screen
+
+65
+00:03:06,760 --> 00:03:08,720
+because I have it on my big monitor.
+
+66
+00:03:10,920 --> 00:03:15,480
+I think a lot of it is like learning how the system works
+
+67
+00:03:15,480 --> 00:03:20,480
+and like where you can click and edit and where you can't
+
+68
+00:03:20,480 --> 00:03:23,640
+and going back and forth between like the general page
+
+69
+00:03:23,640 --> 00:03:26,280
+and then like the deal lines page.
+
+70
+00:03:26,280 --> 00:03:28,640
+And then I also showed him how to export deal lines.
+
+71
+00:03:28,640 --> 00:03:31,640
+So that was our like quick way to check math.
+
+72
+00:03:33,720 --> 00:03:38,720
+Yep, we can try to make it to where it shows totals.
+
+73
+00:03:39,400 --> 00:03:42,760
+But yeah, exporting is definitely the way to go
+
+74
+00:03:42,760 --> 00:03:45,600
+as far as just kind of confirming for sure.
+
+75
+00:03:45,600 --> 00:03:50,600
+Yeah, I mentioned last week, I think the total,
+
+76
+00:03:51,200 --> 00:03:54,600
+I think it is moving, but I think once you start adding
+
+77
+00:03:54,600 --> 00:03:58,880
+like eight line items in 60 seconds,
+
+78
+00:03:58,880 --> 00:04:01,680
+I feel like that's where it may be legs.
+
+79
+00:04:01,680 --> 00:04:04,920
+So like once I was starting to audit
+
+80
+00:04:04,920 --> 00:04:07,360
+and really get going, I was moving quickly.
+
+81
+00:04:08,960 --> 00:04:10,120
+So that's why I'm wondering
+
+82
+00:04:10,120 --> 00:04:12,260
+if it just wasn't catching up in time.
+
+83
+00:04:13,320 --> 00:04:14,620
+Yeah, we'll take a look at that.
+
+84
+00:04:14,620 --> 00:04:17,720
+I'm sure we can get that calculating faster
+
+85
+00:04:17,720 --> 00:04:20,160
+or refreshing faster or something like that.
+
+86
+00:04:20,160 --> 00:04:21,000
+Okay.
+
+87
+00:04:22,760 --> 00:04:23,600
+Well, that's good.
+
+88
+00:04:23,600 --> 00:04:28,440
+I think here's, I guess what I see is like the inventory,
+
+89
+00:04:28,440 --> 00:04:31,080
+I think now is mostly in place.
+
+90
+00:04:31,080 --> 00:04:35,340
+And as I mentioned, I think while Zach was here,
+
+91
+00:04:35,340 --> 00:04:40,140
+but Nate, you are out is now anytime we wanna make changes,
+
+92
+00:04:40,140 --> 00:04:44,100
+let's use this inventory that's been like imported
+
+93
+00:04:44,100 --> 00:04:46,580
+as like the master rate card.
+
+94
+00:04:46,580 --> 00:04:50,500
+Cause I think the issue previously was that,
+
+95
+00:04:50,500 --> 00:04:54,700
+three different sets of inventory sources in a way,
+
+96
+00:04:54,700 --> 00:04:58,580
+there was like the sort of like a master spreadsheet,
+
+97
+00:04:58,580 --> 00:05:00,660
+but there was also what's in track.
+
+98
+00:05:00,660 --> 00:05:05,260
+And then there was the price grids, I think we're calling
+
+99
+00:05:05,260 --> 00:05:08,820
+them and the nomenclature probably didn't match
+
+100
+00:05:08,820 --> 00:05:10,940
+sort of across all of them.
+
+101
+00:05:10,940 --> 00:05:15,300
+And I think now if we can sort of use the inventory
+
+102
+00:05:15,300 --> 00:05:17,500
+for the 2026 in particular,
+
+103
+00:05:17,500 --> 00:05:20,980
+and then when we roll it over to 2027,
+
+104
+00:05:22,260 --> 00:05:23,900
+let's make the changes there,
+
+105
+00:05:23,900 --> 00:05:26,420
+or at least export from Dynamics
+
+106
+00:05:26,420 --> 00:05:29,420
+so that we're sort of keeping everything in line
+
+107
+00:05:29,420 --> 00:05:32,500
+and we can import updates in bulk maybe
+
+108
+00:05:32,500 --> 00:05:37,500
+or wherever you guys don't say this.
+
+109
+00:05:39,820 --> 00:05:41,460
+Sorry about that.
+
+110
+00:05:41,460 --> 00:05:44,820
+So I think like if we can keep them all in line,
+
+111
+00:05:44,820 --> 00:05:48,140
+like all the issues like I think we had in the last month
+
+112
+00:05:48,140 --> 00:05:51,820
+or so where like what was in track just didn't line up
+
+113
+00:05:51,820 --> 00:05:55,820
+with how you guys were actually maybe like putting them
+
+114
+00:05:55,820 --> 00:05:57,380
+into the contracts and stuff.
+
+115
+00:05:57,380 --> 00:06:00,500
+I think that'll like resolve things in the future.
+
+116
+00:06:00,500 --> 00:06:02,060
+So does that make sense?
+
+117
+00:06:02,060 --> 00:06:04,860
+And that you agree while you're on your side?
+
+118
+00:06:05,860 --> 00:06:10,860
+I wonder, I think it would be helpful to start high level
+
+119
+00:06:12,620 --> 00:06:15,260
+with the document that Christine sent over
+
+120
+00:06:15,260 --> 00:06:17,380
+around just the project roadmap.
+
+121
+00:06:17,380 --> 00:06:20,700
+Maybe we can just pull that up and talk through that.
+
+122
+00:06:20,700 --> 00:06:23,900
+And Christine, do they have editing access to that?
+
+123
+00:06:23,900 --> 00:06:27,220
+Did we send it in a way that we can share it in that way
+
+124
+00:06:27,220 --> 00:06:28,580
+or?
+
+125
+00:06:28,580 --> 00:06:29,980
+I didn't share it in that way.
+
+126
+00:06:29,980 --> 00:06:33,500
+I mean, if maybe if Ray makes any edits
+
+127
+00:06:33,500 --> 00:06:34,860
+we can make it a shared doc.
+
+128
+00:06:34,860 --> 00:06:36,940
+I think I just attached it to the email.
+
+129
+00:06:36,940 --> 00:06:38,740
+Yeah, I mean, I would say if you can feel free
+
+130
+00:06:38,740 --> 00:06:41,300
+to red line it Ray or add things in,
+
+131
+00:06:41,300 --> 00:06:44,020
+but why don't we talk through this,
+
+132
+00:06:44,020 --> 00:06:45,660
+would love to see if there's any gaps
+
+133
+00:06:45,660 --> 00:06:48,100
+from your perspective on the leapside.
+
+134
+00:06:48,100 --> 00:06:50,340
+And then to the extent we have time,
+
+135
+00:06:50,340 --> 00:06:54,100
+maybe we get into some of the, you know,
+
+136
+00:06:54,100 --> 00:06:58,300
+the Excel sheet where we had kind of very drill down
+
+137
+00:06:58,300 --> 00:07:00,380
+feedback on specific items.
+
+138
+00:07:01,940 --> 00:07:03,380
+Yeah, let's talk through it.
+
+139
+00:07:04,220 --> 00:07:05,500
+I glance through it.
+
+140
+00:07:05,500 --> 00:07:07,460
+I think, you know, for the most part,
+
+141
+00:07:07,460 --> 00:07:10,900
+everything made a lot of sense, but let's chat through.
+
+142
+00:07:12,700 --> 00:07:15,900
+I think for the purposes of where we're at, you know,
+
+143
+00:07:15,900 --> 00:07:18,580
+like it sounds like the closed one
+
+144
+00:07:18,580 --> 00:07:22,060
+or the stuff that's already been sold
+
+145
+00:07:22,060 --> 00:07:23,340
+is mostly in a good spot.
+
+146
+00:07:23,340 --> 00:07:26,060
+Maybe it sounds like mine is one deal.
+
+147
+00:07:26,060 --> 00:07:30,300
+It sounds like I think it's where now
+
+148
+00:07:30,300 --> 00:07:34,260
+we just have to maybe make sure that the pipeline stuff
+
+149
+00:07:34,260 --> 00:07:37,900
+probably mirrors and matches the correct inventory
+
+150
+00:07:37,900 --> 00:07:40,340
+now that that was rebuilt in the last, you know,
+
+151
+00:07:40,340 --> 00:07:42,540
+two, three weeks or whatever.
+
+152
+00:07:42,540 --> 00:07:45,380
+So I probably agree with this assessment,
+
+153
+00:07:45,380 --> 00:07:47,980
+but really to close one stuff,
+
+154
+00:07:47,980 --> 00:07:51,820
+I think it's closer to 95 or, you know,
+
+155
+00:07:51,820 --> 00:07:52,860
+something like that.
+
+156
+00:07:54,180 --> 00:07:56,100
+As far as like the packages,
+
+157
+00:07:56,100 --> 00:07:58,140
+I know you might have some feedback,
+
+158
+00:07:58,180 --> 00:07:59,700
+Christine, on this.
+
+159
+00:08:01,220 --> 00:08:02,820
+Barry any changes we make there.
+
+160
+00:08:02,820 --> 00:08:04,940
+I think the functionalities there
+
+161
+00:08:04,940 --> 00:08:06,660
+and the packages are mostly built,
+
+162
+00:08:06,660 --> 00:08:08,980
+but you guys probably, as you were going through,
+
+163
+00:08:08,980 --> 00:08:11,340
+had to build some new packages
+
+164
+00:08:11,340 --> 00:08:13,740
+or just update a few things.
+
+165
+00:08:13,740 --> 00:08:15,340
+But for the most part,
+
+166
+00:08:15,340 --> 00:08:20,340
+I think packages and inventory have been mostly built out.
+
+167
+00:08:20,740 --> 00:08:24,140
+I think you guys have done some training on this,
+
+168
+00:08:24,140 --> 00:08:27,300
+but we're happy to also do like another one-off training.
+
+169
+00:08:27,300 --> 00:08:29,540
+I know like in the last week or so
+
+170
+00:08:29,540 --> 00:08:30,460
+it was a bit of a scramble
+
+171
+00:08:30,460 --> 00:08:31,300
+just to kind of like,
+
+172
+00:08:31,300 --> 00:08:34,540
+let's just get everything going before Zach was out,
+
+173
+00:08:34,540 --> 00:08:37,020
+but we're happy to help do that.
+
+174
+00:08:38,020 --> 00:08:39,740
+We're seeing on that,
+
+175
+00:08:39,740 --> 00:08:41,380
+just sticking with that note real quick.
+
+176
+00:08:41,380 --> 00:08:44,180
+I mean, obviously it was not there for Zach's training.
+
+177
+00:08:45,620 --> 00:08:46,980
+You know, and I had previously
+
+178
+00:08:46,980 --> 00:08:48,820
+when we built functionality out, built the deal.
+
+179
+00:08:48,820 --> 00:08:50,700
+I don't think it's overly complicated.
+
+180
+00:08:50,700 --> 00:08:52,620
+I mean, there are a lot of things you gotta fill out
+
+181
+00:08:52,620 --> 00:08:55,100
+to get to the point where you're building the deal,
+
+182
+00:08:55,100 --> 00:08:56,740
+but I think you guys have done a pretty good job
+
+183
+00:08:56,740 --> 00:08:59,460
+of making it clear on like what fields need to be filled in
+
+184
+00:08:59,460 --> 00:09:00,380
+versus what don't.
+
+185
+00:09:00,380 --> 00:09:03,900
+And I will say I found it relatively easy
+
+186
+00:09:03,900 --> 00:09:06,940
+to put deal lines in.
+
+187
+00:09:06,940 --> 00:09:08,940
+I think interestingly, you know,
+
+188
+00:09:08,940 --> 00:09:11,020
+the way that they're showing up,
+
+189
+00:09:11,020 --> 00:09:12,620
+and this maybe gets a little more nitpicky,
+
+190
+00:09:12,620 --> 00:09:14,380
+but there's probably some suggestions
+
+191
+00:09:14,380 --> 00:09:18,020
+we might have or tweaks we might wanna make some of it,
+
+192
+00:09:18,020 --> 00:09:19,140
+potentially could be tweaks
+
+193
+00:09:19,140 --> 00:09:21,100
+to how we think about naming conventions,
+
+194
+00:09:21,100 --> 00:09:24,180
+but also we noticed the notes weren't in there.
+
+195
+00:09:24,180 --> 00:09:25,820
+You know, the deals don't total
+
+196
+00:09:25,820 --> 00:09:27,900
+and then one thing that I personally find
+
+197
+00:09:27,900 --> 00:09:30,620
+to be very annoying is that once a deal is built
+
+198
+00:09:30,620 --> 00:09:34,340
+within a deal, you can't see all the items
+
+199
+00:09:34,340 --> 00:09:36,140
+within the deal in one place.
+
+200
+00:09:36,140 --> 00:09:40,180
+You have to like click over within Dynamics
+
+201
+00:09:40,180 --> 00:09:43,020
+and it would be much more efficient
+
+202
+00:09:43,020 --> 00:09:45,100
+to be able to just see everything that's in their deal
+
+203
+00:09:45,100 --> 00:09:46,540
+because often you wanna look at things
+
+204
+00:09:46,540 --> 00:09:48,180
+in comparison in that way.
+
+205
+00:09:49,180 --> 00:09:51,780
+And sorry, I didn't mean to like, I just kinda did it.
+
+206
+00:09:51,780 --> 00:09:54,060
+I didn't mean to like start getting into the weeds.
+
+207
+00:09:54,900 --> 00:09:56,100
+No, that's good feedback.
+
+208
+00:09:56,100 --> 00:09:59,540
+I know like, oh, this isn't a good example,
+
+209
+00:09:59,540 --> 00:10:03,260
+but it'll only show like total, like a few here
+
+210
+00:10:03,260 --> 00:10:04,100
+and you gotta put some-
+
+211
+00:10:04,100 --> 00:10:06,620
+Yeah, like four, I don't know, four-ish line items.
+
+212
+00:10:06,620 --> 00:10:09,420
+You have to go into the next page in the next page.
+
+213
+00:10:09,420 --> 00:10:11,740
+Yeah, that's like, that's not a great way
+
+214
+00:10:11,740 --> 00:10:13,780
+to be able to view what's in their deal.
+
+215
+00:10:13,780 --> 00:10:17,300
+We'll see if we can expand how many can show here,
+
+216
+00:10:17,300 --> 00:10:19,380
+otherwise we'll try to come up with another way
+
+217
+00:10:19,380 --> 00:10:22,540
+to visualize or show what's added.
+
+218
+00:10:22,540 --> 00:10:25,180
+Great, yeah, and then totaling it too is another thing.
+
+219
+00:10:25,180 --> 00:10:27,300
+Like even when you download, you know, the sheet,
+
+220
+00:10:27,300 --> 00:10:28,660
+you still have to add a total column.
+
+221
+00:10:28,660 --> 00:10:32,340
+Like that's a big part of how we wanna look at this
+
+222
+00:10:32,340 --> 00:10:33,660
+is how the inventory totals up.
+
+223
+00:10:33,660 --> 00:10:36,420
+And I'm sure it obviously shows up in a different place,
+
+224
+00:10:36,420 --> 00:10:38,500
+but not within the deal builder.
+
+225
+00:10:38,500 --> 00:10:41,140
+Yeah, I think we have it for packages.
+
+226
+00:10:41,140 --> 00:10:42,060
+We'll try to move it over
+
+227
+00:10:42,060 --> 00:10:43,820
+when you're doing individual line items.
+
+228
+00:10:43,820 --> 00:10:48,820
+So that one's probably one Gustavo,
+
+229
+00:10:49,300 --> 00:10:52,300
+we could probably replicate there as well.
+
+230
+00:10:52,300 --> 00:10:54,940
+Yeah, Nate, when, if you're looking at a package,
+
+231
+00:10:54,940 --> 00:10:57,740
+we didn't look at a package yesterday,
+
+232
+00:10:57,740 --> 00:10:59,980
+but if you see down at the bottom,
+
+233
+00:10:59,980 --> 00:11:03,700
+well, once you add in a package, it shows the price.
+
+234
+00:11:03,700 --> 00:11:06,460
+And then as you start to add things
+
+235
+00:11:06,460 --> 00:11:09,940
+or change rates, those numbers will update.
+
+236
+00:11:09,940 --> 00:11:12,340
+So that's really nice for the package itself.
+
+237
+00:11:14,420 --> 00:11:17,980
+Move that over to the inventory style, I would imagine.
+
+238
+00:11:18,860 --> 00:11:20,220
+Yeah, so the packages,
+
+239
+00:11:20,220 --> 00:11:21,940
+do they currently not exist within
+
+240
+00:11:21,940 --> 00:11:23,260
+when you go to browse inventory,
+
+241
+00:11:23,260 --> 00:11:26,940
+you actually have to browse packages separately?
+
+242
+00:11:26,940 --> 00:11:28,820
+Yeah, because it's,
+
+243
+00:11:30,740 --> 00:11:35,020
+because we're trying to like have it pick a package
+
+244
+00:11:35,020 --> 00:11:37,820
+and then show all the items underneath it,
+
+245
+00:11:37,820 --> 00:11:42,380
+sort of built in where you add it through the browse package.
+
+246
+00:11:45,740 --> 00:11:47,860
+But it will show you the totals.
+
+247
+00:11:47,860 --> 00:11:50,540
+And I think we have it sort of going off
+
+248
+00:11:50,540 --> 00:11:53,820
+what the Raycard price is telling you
+
+249
+00:11:53,820 --> 00:11:55,260
+like what the difference is.
+
+250
+00:11:55,260 --> 00:11:59,580
+But once you start changing these prices here or editing,
+
+251
+00:11:59,580 --> 00:12:03,020
+then you'll see the totals update and all that.
+
+252
+00:12:07,020 --> 00:12:12,020
+But I do think we can make some tweaks there.
+
+253
+00:12:13,500 --> 00:12:16,380
+And if you had any of these here,
+
+254
+00:12:16,380 --> 00:12:19,700
+we'll try to make sure we note it or add it to here
+
+255
+00:12:19,700 --> 00:12:22,420
+based on what we've shared through today.
+
+256
+00:12:22,420 --> 00:12:23,260
+Okay.
+
+257
+00:12:23,260 --> 00:12:25,780
+Christine, do you think additional training
+
+258
+00:12:25,780 --> 00:12:29,620
+on building deal construction is needed?
+
+259
+00:12:29,620 --> 00:12:31,700
+I feel like we should ask the team that.
+
+260
+00:12:31,700 --> 00:12:32,540
+Okay.
+
+261
+00:12:33,660 --> 00:12:36,700
+Yeah, I've been to in it, so I know how to do it.
+
+262
+00:12:36,700 --> 00:12:39,220
+I'm the wrong person to ask, I think.
+
+263
+00:12:39,220 --> 00:12:40,260
+Okay.
+
+264
+00:12:40,260 --> 00:12:41,420
+You're a pro now.
+
+265
+00:12:41,420 --> 00:12:42,300
+Yeah, let us know.
+
+266
+00:12:42,300 --> 00:12:46,180
+I mean, we can, we talked about it in email the other day,
+
+267
+00:12:46,180 --> 00:12:48,060
+but the Thursday call,
+
+268
+00:12:48,060 --> 00:12:49,740
+I think they dropped off at the end of July,
+
+269
+00:12:49,740 --> 00:12:51,900
+but we can throw that back on if you guys wanna have
+
+270
+00:12:51,900 --> 00:12:54,340
+just like some one-off sessions for an hour
+
+271
+00:12:54,340 --> 00:12:57,700
+or we could just schedule it one-off any time.
+
+272
+00:12:57,700 --> 00:12:58,900
+So just put us in.
+
+273
+00:12:58,900 --> 00:13:00,340
+Okay.
+
+274
+00:13:00,340 --> 00:13:02,700
+I think it would be helpful maybe for us to have
+
+275
+00:13:02,700 --> 00:13:06,060
+one one-hour call a week right now
+
+276
+00:13:06,060 --> 00:13:08,380
+as opposed to two separate calls.
+
+277
+00:13:08,380 --> 00:13:09,220
+Sure.
+
+278
+00:13:14,100 --> 00:13:16,340
+I always have, today I don't,
+
+279
+00:13:16,340 --> 00:13:18,820
+but I typically have a call right after this,
+
+280
+00:13:18,820 --> 00:13:21,140
+so we either can go back to the Thursday time
+
+281
+00:13:21,140 --> 00:13:24,220
+or I can send you some other times that work for us
+
+282
+00:13:24,220 --> 00:13:28,900
+and for an hour block and you let us know it works.
+
+283
+00:13:28,900 --> 00:13:29,740
+And then we just.
+
+284
+00:13:29,740 --> 00:13:30,580
+Yeah, well, remind me,
+
+285
+00:13:30,580 --> 00:13:32,780
+what was our Thursday time that we originally had?
+
+286
+00:13:32,780 --> 00:13:37,780
+One, sorry, let me look, I'll tell my head.
+
+287
+00:13:41,140 --> 00:13:42,700
+Is it noon?
+
+288
+00:13:42,700 --> 00:13:44,900
+It was three p.m. Eastern.
+
+289
+00:13:44,900 --> 00:13:45,740
+Oh yeah, noon.
+
+290
+00:13:45,940 --> 00:13:47,500
+Is it any time?
+
+291
+00:13:47,500 --> 00:13:48,940
+I mean, my guess is Christine,
+
+292
+00:13:48,940 --> 00:13:50,740
+tell me if this was accurate for you two,
+
+293
+00:13:50,740 --> 00:13:52,620
+because we had had that blocked,
+
+294
+00:13:52,620 --> 00:13:55,740
+I'm guessing I don't have much booked on Thursdays at noon now
+
+295
+00:13:55,740 --> 00:13:57,340
+because that time was saved for you guys.
+
+296
+00:13:57,340 --> 00:13:59,220
+So, I mean, it'd probably just be easiest
+
+297
+00:13:59,220 --> 00:14:00,660
+to go right back to that.
+
+298
+00:14:02,340 --> 00:14:03,180
+Yeah.
+
+299
+00:14:04,340 --> 00:14:05,280
+That sense.
+
+300
+00:14:09,100 --> 00:14:14,100
+I'll update the Friday invite to just go back
+
+301
+00:14:16,620 --> 00:14:18,660
+to be on Thursdays now.
+
+302
+00:14:18,660 --> 00:14:20,140
+Does that make sense?
+
+303
+00:14:20,140 --> 00:14:20,980
+Yeah.
+
+304
+00:14:22,340 --> 00:14:24,660
+And we can do one offsets needed to your point.
+
+305
+00:14:24,660 --> 00:14:27,580
+Okay, so we'll check in with the team on training,
+
+306
+00:14:27,580 --> 00:14:29,100
+building into auditing deals.
+
+307
+00:14:29,100 --> 00:14:30,700
+I feel like that's sort of the stage
+
+308
+00:14:30,700 --> 00:14:32,300
+that we're currently in,
+
+309
+00:14:32,300 --> 00:14:33,900
+although Christine did a lot of the auditing work
+
+310
+00:14:33,900 --> 00:14:37,740
+last week, so we're probably now
+
+311
+00:14:37,740 --> 00:14:39,660
+to that number four here, right?
+
+312
+00:14:40,980 --> 00:14:42,980
+I think for the most part,
+
+313
+00:14:42,980 --> 00:14:46,300
+we deleted all the line items off of everything
+
+314
+00:14:46,300 --> 00:14:47,860
+because we had to rebuild the inventory.
+
+315
+00:14:47,860 --> 00:14:50,780
+So any deals out there,
+
+316
+00:14:53,220 --> 00:14:57,380
+I'm sure you guys rebuilt or put in the close one deals.
+
+317
+00:14:57,380 --> 00:14:59,020
+I think the only thing maybe we need to audit
+
+318
+00:14:59,020 --> 00:15:01,060
+are any deals that are out there
+
+319
+00:15:01,060 --> 00:15:03,500
+that don't currently have a line item on it.
+
+320
+00:15:03,500 --> 00:15:04,980
+Do you wanna like keep those
+
+321
+00:15:04,980 --> 00:15:08,100
+or those pipeline ones that we now need to put
+
+322
+00:15:08,100 --> 00:15:11,580
+new potential open pitches to, you know,
+
+323
+00:15:11,580 --> 00:15:12,940
+that type of thing,
+
+324
+00:15:12,940 --> 00:15:14,660
+just because we had to clear everything out
+
+325
+00:15:14,660 --> 00:15:16,020
+with the new inventory.
+
+326
+00:15:16,020 --> 00:15:17,860
+Does that make sense?
+
+327
+00:15:17,860 --> 00:15:21,620
+You're saying anybody who had built something
+
+328
+00:15:21,620 --> 00:15:23,340
+in the pipeline would have been erased.
+
+329
+00:15:23,340 --> 00:15:24,780
+Am I understanding that correctly?
+
+330
+00:15:24,780 --> 00:15:27,620
+Yeah, I think we decided on the calls
+
+331
+00:15:27,620 --> 00:15:31,620
+that like there was no way to sort of keep the inventory
+
+332
+00:15:31,620 --> 00:15:33,780
+that was on there.
+
+333
+00:15:33,780 --> 00:15:37,020
+So it's better just to delete the deal lines,
+
+334
+00:15:37,020 --> 00:15:38,060
+rebuild the inventory,
+
+335
+00:15:38,060 --> 00:15:40,420
+and then we'd have to re-add deal lines
+
+336
+00:15:40,420 --> 00:15:45,420
+to any of the pipeline items or pipeline deals.
+
+337
+00:15:46,540 --> 00:15:48,100
+Yeah, yeah, I mean, that makes sense.
+
+338
+00:15:48,100 --> 00:15:52,220
+I think a lot of our, yes, no problem,
+
+339
+00:15:52,220 --> 00:15:53,940
+I think we just need to communicate that
+
+340
+00:15:53,940 --> 00:15:56,100
+with the sales team, obviously,
+
+341
+00:15:56,100 --> 00:15:57,900
+that anything that's currently in the pipeline
+
+342
+00:15:57,900 --> 00:16:00,340
+just needs to be rebuilt.
+
+343
+00:16:00,340 --> 00:16:05,340
+Yeah, we can probably find any deals without deal lines
+
+344
+00:16:05,540 --> 00:16:10,540
+and then send a list over and you guys can tell us
+
+345
+00:16:11,100 --> 00:16:13,900
+if you want to delete those or if Tiffany
+
+346
+00:16:13,900 --> 00:16:17,180
+or whoever wants to add new lines back to them.
+
+347
+00:16:17,180 --> 00:16:18,220
+That's a good idea.
+
+348
+00:16:18,220 --> 00:16:19,060
+Yeah.
+
+349
+00:16:20,500 --> 00:16:21,580
+Sounds good.
+
+350
+00:16:21,580 --> 00:16:25,220
+And then on all the existing deals that are closed one,
+
+351
+00:16:25,220 --> 00:16:29,220
+how do we just pull up a report to just look at those?
+
+352
+00:16:29,300 --> 00:16:30,500
+Collectively.
+
+353
+00:16:30,500 --> 00:16:35,500
+Yeah, I think we have closed one.
+
+354
+00:16:35,980 --> 00:16:39,220
+Also, yeah, right, I'm sent in the chat.
+
+355
+00:16:40,220 --> 00:16:41,700
+While we were doing the audit,
+
+356
+00:16:41,700 --> 00:16:45,140
+we kept everything as like prospect identified
+
+357
+00:16:45,140 --> 00:16:45,980
+for all the deals.
+
+358
+00:16:45,980 --> 00:16:46,820
+Oh, that's right.
+
+359
+00:16:46,820 --> 00:16:48,460
+We need to flip them back to close one.
+
+360
+00:16:48,460 --> 00:16:49,300
+That's why I think so.
+
+361
+00:16:49,300 --> 00:16:50,140
+Yeah.
+
+362
+00:16:50,140 --> 00:16:54,140
+So I think most of them can be moved back to close one.
+
+363
+00:16:54,140 --> 00:16:58,220
+I think most of them can be moved back to close one.
+
+364
+00:16:58,220 --> 00:17:00,140
+Some of them can be moved to closed one.
+
+365
+00:17:00,140 --> 00:17:02,340
+So I don't know if that's something you want me to do
+
+366
+00:17:02,340 --> 00:17:04,540
+to make sure it's all the current partners
+
+367
+00:17:04,540 --> 00:17:08,220
+get shifted to closed one or if you guys want to do that.
+
+368
+00:17:08,220 --> 00:17:11,180
+How about I'll flip you a list and you confirm
+
+369
+00:17:11,180 --> 00:17:13,820
+these are the ones that are all set
+
+370
+00:17:13,820 --> 00:17:16,020
+and we can flip the closed one.
+
+371
+00:17:16,020 --> 00:17:16,860
+Okay, that sounds good.
+
+372
+00:17:16,860 --> 00:17:20,220
+And that's when we flip it to close one,
+
+373
+00:17:20,220 --> 00:17:23,140
+this view I think is open for you guys,
+
+374
+00:17:23,140 --> 00:17:24,980
+it'll populate.
+
+375
+00:17:24,980 --> 00:17:27,580
+I'm sure if I made this like...
+
+376
+00:17:30,220 --> 00:17:33,580
+Yeah, could you change it to prospect identified maybe?
+
+377
+00:17:35,540 --> 00:17:40,060
+Just temporarily you'll see like these are some of the deals,
+
+378
+00:17:40,060 --> 00:17:45,060
+but we will definitely close out, close them as one
+
+379
+00:17:47,460 --> 00:17:48,820
+and then this will,
+
+380
+00:17:48,820 --> 00:17:51,500
+you don't have to manually update any of these.
+
+381
+00:17:52,500 --> 00:17:57,500
+This one should be anything regardless of stage for 2026.
+
+382
+00:18:00,220 --> 00:18:02,420
+We'll clean up some of these views,
+
+383
+00:18:02,420 --> 00:18:07,420
+maybe after we finalize some of the stage updates
+
+384
+00:18:07,860 --> 00:18:10,780
+and confirm a few things on your end.
+
+385
+00:18:10,780 --> 00:18:12,740
+And Christine, my thought on this was perhaps
+
+386
+00:18:12,740 --> 00:18:15,100
+we've done this before with other reporting functions
+
+387
+00:18:15,100 --> 00:18:17,300
+to confirm revenue numbers is maybe you and I
+
+388
+00:18:17,420 --> 00:18:21,540
+just use that list and verify that,
+
+389
+00:18:21,540 --> 00:18:24,180
+how we're tracking the total revenue for a deal
+
+390
+00:18:24,180 --> 00:18:26,020
+aligns with exactly what's there
+
+391
+00:18:26,020 --> 00:18:29,420
+before we published a track or pushed a track.
+
+392
+00:18:29,420 --> 00:18:31,780
+I think that's a good idea because I mean,
+
+393
+00:18:31,780 --> 00:18:34,580
+I was the one doing most of the auditing.
+
+394
+00:18:35,620 --> 00:18:38,900
+I told Zach to work on his other stuff
+
+395
+00:18:38,900 --> 00:18:40,180
+so he could be more efficient.
+
+396
+00:18:40,180 --> 00:18:43,700
+So I mean, obviously there could be some human error.
+
+397
+00:18:44,820 --> 00:18:47,020
+So I think checking those total revs
+
+398
+00:18:47,060 --> 00:18:50,380
+at least will be good and good find.
+
+399
+00:18:50,380 --> 00:18:55,060
+We'll go through also verify the total as well.
+
+400
+00:18:56,300 --> 00:18:57,140
+Great.
+
+401
+00:18:57,140 --> 00:18:58,980
+To your point on the track integration,
+
+402
+00:18:58,980 --> 00:19:03,980
+I think everything we've built should sink over.
+
+403
+00:19:04,340 --> 00:19:06,580
+I think it's more a matter of connecting with Cameron
+
+404
+00:19:06,580 --> 00:19:09,100
+when we feel like the current deals that are there
+
+405
+00:19:09,100 --> 00:19:13,460
+are in a good spot and maybe just have them
+
+406
+00:19:13,460 --> 00:19:14,940
+do one more test or something
+
+407
+00:19:14,940 --> 00:19:16,500
+just because it's been a little while
+
+408
+00:19:16,500 --> 00:19:18,100
+since we did the tests.
+
+409
+00:19:18,100 --> 00:19:20,100
+It was successful.
+
+410
+00:19:20,100 --> 00:19:22,940
+I think the last time we did like a single test record
+
+411
+00:19:22,940 --> 00:19:27,220
+but we can connect Cameron once we kind of
+
+412
+00:19:27,220 --> 00:19:28,980
+just finalize a few of these items.
+
+413
+00:19:30,020 --> 00:19:32,780
+And can you remind me, do you guys have access to track?
+
+414
+00:19:32,780 --> 00:19:34,500
+Like admin, you could sign in.
+
+415
+00:19:34,500 --> 00:19:35,340
+Okay.
+
+416
+00:19:35,340 --> 00:19:38,860
+And I actually, I figured out
+
+417
+00:19:38,860 --> 00:19:40,740
+how to export some of the things from there.
+
+418
+00:19:40,740 --> 00:19:42,820
+I know you'd sent us previously
+
+419
+00:19:42,860 --> 00:19:47,380
+so I was just kind of verifying a few things
+
+420
+00:19:47,380 --> 00:19:48,940
+I think a couple of weeks ago.
+
+421
+00:19:48,940 --> 00:19:51,660
+So, but you actually were able to see it.
+
+422
+00:19:51,660 --> 00:19:53,060
+I think the one reminder though
+
+423
+00:19:53,060 --> 00:19:55,940
+is that for these closed one deals
+
+424
+00:19:55,940 --> 00:19:58,500
+because we're creating brand new inventory
+
+425
+00:19:58,500 --> 00:20:02,460
+they're gonna get another deal in track.
+
+426
+00:20:02,460 --> 00:20:05,220
+And I think you will make that one maybe not visible
+
+427
+00:20:05,220 --> 00:20:07,380
+or maybe just hard for now.
+
+428
+00:20:07,380 --> 00:20:12,380
+But in the future, when we roll over a 2027 deal
+
+429
+00:20:13,140 --> 00:20:15,220
+for anybody that's like maybe multi-year
+
+430
+00:20:15,220 --> 00:20:17,380
+or you sell somebody new,
+
+431
+00:20:17,380 --> 00:20:20,140
+you should just have one deal in track
+
+432
+00:20:20,140 --> 00:20:21,380
+hopefully going forward
+
+433
+00:20:21,380 --> 00:20:24,420
+and then it has the right inventory and so on.
+
+434
+00:20:24,420 --> 00:20:25,820
+Yep.
+
+435
+00:20:25,820 --> 00:20:28,820
+And we have to actively publish a deal
+
+436
+00:20:28,820 --> 00:20:30,940
+for them to see externally.
+
+437
+00:20:30,940 --> 00:20:32,660
+So we just won't publish the ones
+
+438
+00:20:32,660 --> 00:20:35,180
+that come in from Dynamics.
+
+439
+00:20:35,180 --> 00:20:36,020
+Perfect.
+
+440
+00:20:36,020 --> 00:20:38,740
+I think once we turn the track integration on
+
+441
+00:20:38,740 --> 00:20:40,740
+maybe it's worth like we set up a call
+
+442
+00:20:40,740 --> 00:20:42,620
+just to kind of look throughout
+
+443
+00:20:42,620 --> 00:20:46,140
+how everything is on your end in track.
+
+444
+00:20:46,140 --> 00:20:47,500
+That sounds good.
+
+445
+00:20:47,500 --> 00:20:48,340
+Yeah.
+
+446
+00:20:48,340 --> 00:20:49,660
+And I know one of the things on our list
+
+447
+00:20:49,660 --> 00:20:54,660
+was the external and internal descriptions
+
+448
+00:20:54,820 --> 00:20:57,460
+which I realized somehow that note
+
+449
+00:20:57,460 --> 00:21:01,460
+was copied and pasted with another one
+
+450
+00:21:01,460 --> 00:21:04,580
+but the internal and external.
+
+451
+00:21:04,580 --> 00:21:05,420
+Let's see.
+
+452
+00:21:05,420 --> 00:21:06,460
+So it should be line
+
+453
+00:21:08,740 --> 00:21:09,580
+which one is it?
+
+454
+00:21:09,580 --> 00:21:10,420
+Line seven.
+
+455
+00:21:10,420 --> 00:21:13,940
+It says add rate card descriptions,
+
+456
+00:21:13,940 --> 00:21:16,380
+the actual description and column B.
+
+457
+00:21:16,380 --> 00:21:18,260
+It looks like we just accidentally copied
+
+458
+00:21:18,260 --> 00:21:19,300
+and pasted over.
+
+459
+00:21:20,300 --> 00:21:21,140
+So then-
+
+460
+00:21:21,140 --> 00:21:22,180
+I think actually,
+
+461
+00:21:22,180 --> 00:21:24,020
+Gustavo, we've already talked about
+
+462
+00:21:24,020 --> 00:21:26,180
+the internal external descriptions.
+
+463
+00:21:26,180 --> 00:21:28,460
+I think that was the weaker too, right?
+
+464
+00:21:30,220 --> 00:21:32,020
+Yeah, so we may have already made
+
+465
+00:21:32,020 --> 00:21:32,860
+some of those changes.
+
+466
+00:21:32,860 --> 00:21:34,780
+We just need to surface the fields
+
+467
+00:21:34,780 --> 00:21:37,140
+in the deal line builder or something.
+
+468
+00:21:37,140 --> 00:21:38,220
+Okay.
+
+469
+00:21:38,220 --> 00:21:39,060
+Okay.
+
+470
+00:21:39,100 --> 00:21:41,020
+So I was gonna say that's one that we can check
+
+471
+00:21:41,020 --> 00:21:42,740
+when we do the track audit,
+
+472
+00:21:42,740 --> 00:21:45,180
+like how did it work?
+
+473
+00:21:45,180 --> 00:21:49,700
+Where just the external facing notes went to track.
+
+474
+00:21:49,700 --> 00:21:51,140
+That's a good call.
+
+475
+00:21:51,140 --> 00:21:53,140
+The internal facing ones are like
+
+476
+00:21:53,140 --> 00:21:55,780
+the Wasserman valuation type info
+
+477
+00:21:55,780 --> 00:21:58,380
+and like how we sell it.
+
+478
+00:21:58,380 --> 00:22:02,500
+That's actually why I exported the inventory from track
+
+479
+00:22:02,500 --> 00:22:04,860
+because I wanted to see what that description field
+
+480
+00:22:04,860 --> 00:22:06,660
+was there.
+
+481
+00:22:06,780 --> 00:22:08,940
+I think if we just create
+
+482
+00:22:08,940 --> 00:22:12,380
+another random description field in Dynamics,
+
+483
+00:22:12,380 --> 00:22:13,540
+it's not gonna sink over
+
+484
+00:22:13,540 --> 00:22:16,300
+because we haven't created that field on that side.
+
+485
+00:22:16,300 --> 00:22:18,100
+So that's the hope.
+
+486
+00:22:18,100 --> 00:22:22,540
+And soon when we map it correctly,
+
+487
+00:22:22,540 --> 00:22:25,060
+then I think it would all work properly.
+
+488
+00:22:25,060 --> 00:22:25,900
+So.
+
+489
+00:22:30,740 --> 00:22:32,380
+All right, so that's this.
+
+490
+00:22:32,380 --> 00:22:36,060
+I think I've had some thoughts actually
+
+491
+00:22:36,060 --> 00:22:39,060
+on this multi-year and playoffs and so on.
+
+492
+00:22:39,060 --> 00:22:40,780
+So for the multi-year,
+
+493
+00:22:41,700 --> 00:22:43,500
+I wanted to run something by you guys.
+
+494
+00:22:43,500 --> 00:22:44,820
+I know we have the automation
+
+495
+00:22:44,820 --> 00:22:47,980
+that if you put the term as three years
+
+496
+00:22:47,980 --> 00:22:51,860
+or more than one that we have an automation
+
+497
+00:22:51,860 --> 00:22:54,940
+that would create the deals in the future years.
+
+498
+00:22:54,940 --> 00:22:58,540
+But I'm wondering if you guys have so many changes
+
+499
+00:22:58,540 --> 00:23:03,140
+year to year that you wanna only roll them over
+
+500
+00:23:03,140 --> 00:23:04,700
+when you're ready to
+
+501
+00:23:04,700 --> 00:23:09,260
+and we kick off a process that anybody that had 2026
+
+502
+00:23:09,260 --> 00:23:11,940
+and more than one year on the term,
+
+503
+00:23:11,940 --> 00:23:14,140
+we roll it over when you guys feel comfortable
+
+504
+00:23:14,140 --> 00:23:17,820
+that inventory is correct or something like that.
+
+505
+00:23:17,820 --> 00:23:20,620
+I just wanted to kind of throw that out.
+
+506
+00:23:20,620 --> 00:23:23,020
+We can have the automated process,
+
+507
+00:23:23,020 --> 00:23:27,060
+but I just know you guys are undergoing changes
+
+508
+00:23:27,060 --> 00:23:31,460
+to what is offered and inventory and things like that.
+
+509
+00:23:31,460 --> 00:23:35,340
+Pretty often there are these packages set up.
+
+510
+00:23:35,340 --> 00:23:38,260
+If it's set once it's sold and it's a multi-year deal
+
+511
+00:23:38,260 --> 00:23:39,980
+and you wanna automate it,
+
+512
+00:23:39,980 --> 00:23:42,020
+we can definitely turn that back on.
+
+513
+00:23:42,020 --> 00:23:45,380
+But I just wanted to throw that option out there.
+
+514
+00:23:48,460 --> 00:23:50,820
+I'm not sure I'm completely following this,
+
+515
+00:23:50,820 --> 00:23:52,860
+the recommendation or suggestion you're making, right?
+
+516
+00:23:52,860 --> 00:23:53,700
+Can you, can you say?
+
+517
+00:23:53,700 --> 00:23:56,660
+Yeah, so for like 2026 deals,
+
+518
+00:23:56,660 --> 00:23:58,500
+we were putting them in.
+
+519
+00:23:58,500 --> 00:24:01,780
+And if they had a term of more than one year,
+
+520
+00:24:01,780 --> 00:24:03,260
+we've turned off the automation
+
+521
+00:24:03,260 --> 00:24:07,580
+that would have created the 2027 and beyond deals.
+
+522
+00:24:09,500 --> 00:24:10,860
+I was just wondering,
+
+523
+00:24:10,860 --> 00:24:13,500
+does it make sense to put,
+
+524
+00:24:13,500 --> 00:24:16,660
+turn that automation on and just have it replicate
+
+525
+00:24:16,660 --> 00:24:19,300
+these line items from the 2026 deal
+
+526
+00:24:19,300 --> 00:24:22,220
+and have the automation on as we had built it?
+
+527
+00:24:22,220 --> 00:24:24,540
+Or do you want to have like,
+
+528
+00:24:24,540 --> 00:24:26,580
+when you guys are ready and you feel comfortable,
+
+529
+00:24:26,580 --> 00:24:29,340
+anything that had a 2026 deal
+
+530
+00:24:29,340 --> 00:24:31,980
+that had a term of more than one,
+
+531
+00:24:31,980 --> 00:24:36,900
+let's roll over the 2027 inventory,
+
+532
+00:24:36,900 --> 00:24:38,820
+only because I think sometimes you guys are having
+
+533
+00:24:38,820 --> 00:24:41,420
+a lot more changes to the inventory
+
+534
+00:24:41,420 --> 00:24:42,500
+and different things going on.
+
+535
+00:24:42,500 --> 00:24:44,980
+So I just wanted to run that by you.
+
+536
+00:24:44,980 --> 00:24:47,060
+Does that make some sense?
+
+537
+00:24:48,140 --> 00:24:49,140
+I think so.
+
+538
+00:24:50,300 --> 00:24:52,460
+My recollection from my last conversation with Zach
+
+539
+00:24:52,460 --> 00:24:55,180
+and perhaps I don't know if you all had
+
+540
+00:24:55,180 --> 00:24:57,100
+additional conversations about the multi-year
+
+541
+00:24:57,100 --> 00:25:01,700
+was that we were publishing everything as 26
+
+542
+00:25:01,700 --> 00:25:03,380
+and then we would have to manually go back
+
+543
+00:25:03,380 --> 00:25:07,500
+and update the multi-year functionality for each deal.
+
+544
+00:25:07,500 --> 00:25:08,340
+Is that?
+
+545
+00:25:08,340 --> 00:25:12,100
+I think so because we were like redoing the inventory,
+
+546
+00:25:12,100 --> 00:25:15,900
+we turned it off because we just wanted to get 2026 deals
+
+547
+00:25:15,900 --> 00:25:17,420
+in a good spot.
+
+548
+00:25:17,420 --> 00:25:18,260
+Yeah.
+
+549
+00:25:18,260 --> 00:25:21,900
+So like the idea was to get the automated process
+
+550
+00:25:21,900 --> 00:25:26,140
+back on so that now if you sell a 2026 deal
+
+551
+00:25:26,140 --> 00:25:31,140
+or 2027 deal that has a more than one-year term
+
+552
+00:25:31,580 --> 00:25:34,580
+that it would automatically create the future of your deals.
+
+553
+00:25:35,940 --> 00:25:38,620
+So that was sort of the ideal scenario
+
+554
+00:25:38,620 --> 00:25:40,720
+but I'm just wondering if you guys have
+
+555
+00:25:40,720 --> 00:25:44,180
+so many changes going on that it's like problematic
+
+556
+00:25:44,180 --> 00:25:45,900
+where you'd have to delete deals later
+
+557
+00:25:45,900 --> 00:25:48,740
+or delete things and then have to re-add and so on.
+
+558
+00:25:48,740 --> 00:25:51,820
+Cause I think deletions and dynamics
+
+559
+00:25:51,820 --> 00:25:54,380
+don't fully sink over to track.
+
+560
+00:25:55,320 --> 00:25:59,180
+It's really only modifications or ads, I believe.
+
+561
+00:25:59,180 --> 00:26:01,460
+I mean, ultimately, yes, we want the functionality
+
+562
+00:26:01,460 --> 00:26:03,420
+to moving forward, right?
+
+563
+00:26:03,420 --> 00:26:05,420
+From here on out, you close the deal, it's a multi-year
+
+564
+00:26:05,420 --> 00:26:06,780
+deal, you want it.
+
+565
+00:26:06,780 --> 00:26:09,020
+We do want that functionality within Dynamics
+
+566
+00:26:09,020 --> 00:26:11,100
+that it's gonna publish.
+
+567
+00:26:11,100 --> 00:26:14,940
+I think just to clarify my question was
+
+568
+00:26:14,940 --> 00:26:17,660
+we still need to go back with all the closed one
+
+569
+00:26:17,700 --> 00:26:20,060
+and add the multi-year details in, right?
+
+570
+00:26:20,060 --> 00:26:22,860
+3%, 5%, whatever, that's still the thing
+
+571
+00:26:22,860 --> 00:26:25,500
+that what Christine and I need to do
+
+572
+00:26:25,500 --> 00:26:27,220
+or is that something you all do?
+
+573
+00:26:28,740 --> 00:26:30,460
+Well, I don't know if we have the details through it
+
+574
+00:26:30,460 --> 00:26:33,140
+but if we do, we can trigger it
+
+575
+00:26:33,140 --> 00:26:36,860
+to create then the future of your deals, right?
+
+576
+00:26:36,860 --> 00:26:39,500
+We just need to know which ones of those deals
+
+577
+00:26:39,500 --> 00:26:40,540
+on the opportunity level.
+
+578
+00:26:40,540 --> 00:26:43,820
+I think we put the term and some of those escalators
+
+579
+00:26:43,820 --> 00:26:45,540
+and things like that.
+
+580
+00:26:45,540 --> 00:26:48,220
+That's where we'll need to update those
+
+581
+00:26:48,220 --> 00:26:49,820
+if they're not already updated.
+
+582
+00:26:49,820 --> 00:26:51,700
+Does that make sense?
+
+583
+00:26:51,700 --> 00:26:53,740
+And then we can help trigger it
+
+584
+00:26:53,740 --> 00:26:56,580
+so you don't have to manually create the 20, 27 deals
+
+585
+00:26:56,580 --> 00:26:58,580
+or 28 and so on.
+
+586
+00:27:00,620 --> 00:27:03,660
+I think that we should keep with the automation
+
+587
+00:27:03,660 --> 00:27:05,820
+to go into future years.
+
+588
+00:27:05,820 --> 00:27:08,260
+Like Nate said, I think that's the priority
+
+589
+00:27:08,260 --> 00:27:11,780
+and I think track and making sure that's accurate
+
+590
+00:27:11,780 --> 00:27:14,220
+is second priority.
+
+591
+00:27:16,460 --> 00:27:20,500
+And Nate, he's talking about if we make changes,
+
+592
+00:27:20,500 --> 00:27:25,500
+like if somebody swaps things out during the off season
+
+593
+00:27:25,620 --> 00:27:28,660
+and like we created an amendment or something.
+
+594
+00:27:29,540 --> 00:27:32,220
+Yeah, and that does happen obviously from time to time.
+
+595
+00:27:32,220 --> 00:27:35,980
+And I think that either way that's gonna necessitate
+
+596
+00:27:35,980 --> 00:27:37,940
+the account manager or the salesperson going in
+
+597
+00:27:37,940 --> 00:27:42,500
+and like editing the future year deal, right?
+
+598
+00:27:42,500 --> 00:27:47,140
+Yeah, in those cases it might be where you have to
+
+599
+00:27:47,140 --> 00:27:48,260
+do it on both sides.
+
+600
+00:27:48,260 --> 00:27:50,220
+That's the only time we're deleting something
+
+601
+00:27:50,220 --> 00:27:52,620
+you have to do it on both sides.
+
+602
+00:27:52,620 --> 00:27:54,220
+I mean, I think advantage.
+
+603
+00:27:54,220 --> 00:27:57,220
+I think the future outlook is more important.
+
+604
+00:27:58,900 --> 00:27:59,860
+Yeah, I agree.
+
+605
+00:28:01,340 --> 00:28:06,340
+So once we get step one here, phase one really dialed in,
+
+606
+00:28:06,620 --> 00:28:08,540
+it seems like that next step then is
+
+607
+00:28:08,540 --> 00:28:10,820
+to add the contract terms
+
+608
+00:28:10,820 --> 00:28:15,180
+and the multi-year functionality in for all of those deals.
+
+609
+00:28:15,180 --> 00:28:17,500
+And then one thing I'm not seeing on here
+
+610
+00:28:17,500 --> 00:28:20,540
+that I know has been discussed is incremental games
+
+611
+00:28:20,540 --> 00:28:21,660
+and how we're accounting for those
+
+612
+00:28:21,660 --> 00:28:24,980
+which took place this year in 26.
+
+613
+00:28:26,860 --> 00:28:29,060
+How is that reflected in the deal build
+
+614
+00:28:29,060 --> 00:28:31,540
+and the multi-year functionality and all that?
+
+615
+00:28:32,500 --> 00:28:34,420
+Yeah, you can correct me if I'm wrong.
+
+616
+00:28:34,420 --> 00:28:38,560
+Does the new inventory reflect on almost per game basis?
+
+617
+00:28:41,100 --> 00:28:42,380
+Right, say that again.
+
+618
+00:28:42,380 --> 00:28:43,700
+Like your new rate card,
+
+619
+00:28:43,700 --> 00:28:46,660
+it's kind of on a per game basis now.
+
+620
+00:28:46,660 --> 00:28:50,300
+Like previously it was on like a season long basis, right?
+
+621
+00:28:50,300 --> 00:28:51,140
+Yeah.
+
+622
+00:28:51,140 --> 00:28:54,580
+It's faked into the rate card
+
+623
+00:28:54,580 --> 00:28:57,780
+if you have the inventories based on number of games.
+
+624
+00:29:00,340 --> 00:29:04,700
+So if 2027 just had,
+
+625
+00:29:04,700 --> 00:29:08,140
+I think you guys are expanding games next year, right?
+
+626
+00:29:08,140 --> 00:29:09,940
+Yeah, we're going to 50, yeah.
+
+627
+00:29:10,940 --> 00:29:13,940
+So I think just the 2027 rate card
+
+628
+00:29:13,940 --> 00:29:17,700
+might have more inventory available
+
+629
+00:29:17,700 --> 00:29:20,980
+and that's how we adjust for what there is.
+
+630
+00:29:20,980 --> 00:29:25,660
+We didn't put, I don't think there's something saying
+
+631
+00:29:25,660 --> 00:29:29,820
+like you sold it for this very specific game.
+
+632
+00:29:29,820 --> 00:29:30,660
+Yeah.
+
+633
+00:29:30,660 --> 00:29:32,380
+But it is reflective.
+
+634
+00:29:32,380 --> 00:29:34,140
+I think in the new inventory
+
+635
+00:29:34,140 --> 00:29:36,460
+is how I understood it potentially.
+
+636
+00:29:36,460 --> 00:29:39,820
+And if I'm wrong, I could be, you know, let me know.
+
+637
+00:29:39,820 --> 00:29:41,740
+Well, I think what you're saying makes sense
+
+638
+00:29:41,740 --> 00:29:44,380
+and I believe you are correct in that.
+
+639
+00:29:44,380 --> 00:29:45,540
+I think we were,
+
+640
+00:29:45,540 --> 00:29:48,660
+I remember Zach not really being sure
+
+641
+00:29:48,660 --> 00:29:49,860
+how to account for it.
+
+642
+00:29:49,860 --> 00:29:51,740
+And I guess this may be a question
+
+643
+00:29:51,740 --> 00:29:53,340
+for us, Christine, to consider,
+
+644
+00:29:53,340 --> 00:29:54,820
+which is that, you know,
+
+645
+00:29:54,820 --> 00:29:56,540
+every year you've got the baseline deal
+
+646
+00:29:56,540 --> 00:30:00,100
+and then for the LEAP team, for your visibility,
+
+647
+00:30:00,100 --> 00:30:02,260
+the way this shows up within contracts,
+
+648
+00:30:02,260 --> 00:30:07,260
+is it's a non-amendment, it's an exhibit.
+
+649
+00:30:08,260 --> 00:30:09,940
+And so it basically says,
+
+650
+00:30:09,940 --> 00:30:12,300
+hey, you know, your baseline contract is it.
+
+651
+00:30:12,300 --> 00:30:14,740
+We're gonna deliver this thing for this many games
+
+652
+00:30:14,740 --> 00:30:16,460
+and in the future, if it grows,
+
+653
+00:30:16,460 --> 00:30:18,420
+here's what you're gonna have to pay for it.
+
+654
+00:30:18,420 --> 00:30:22,380
+Now, I would say that while we are kind of tracking
+
+655
+00:30:22,380 --> 00:30:24,580
+what our incremental game revenue is,
+
+656
+00:30:24,580 --> 00:30:26,620
+because it's important for us to be able to tribute
+
+657
+00:30:26,620 --> 00:30:28,620
+revenue to the growth of the league, right?
+
+658
+00:30:28,620 --> 00:30:31,780
+That's sort of a subset of a report that we would do.
+
+659
+00:30:31,780 --> 00:30:33,060
+I think the way it's set up,
+
+660
+00:30:33,060 --> 00:30:34,460
+how you just described it, right?
+
+661
+00:30:34,460 --> 00:30:36,620
+We wouldn't be able to do that.
+
+662
+00:30:36,660 --> 00:30:39,180
+But I think we need to determine how important that is
+
+663
+00:30:39,180 --> 00:30:42,460
+because it's more of an internal report versus like,
+
+664
+00:30:42,460 --> 00:30:44,660
+I mean, what we're always reporting it on for the most part
+
+665
+00:30:44,660 --> 00:30:46,820
+is like the holistic revenue of one deal
+
+666
+00:30:46,820 --> 00:30:49,540
+or the holistic revenue of the department
+
+667
+00:30:49,540 --> 00:30:51,260
+or all the deals together.
+
+668
+00:30:51,260 --> 00:30:53,380
+So this may be, Christine,
+
+669
+00:30:53,380 --> 00:30:56,140
+it might be a question for us to just think about like,
+
+670
+00:30:56,140 --> 00:30:58,380
+and from an account manager standpoint too, right?
+
+671
+00:30:58,380 --> 00:31:00,620
+Like think about the billing and how that's laid out.
+
+672
+00:31:00,620 --> 00:31:04,140
+Like we've got the billing built into the regular deal
+
+673
+00:31:04,140 --> 00:31:05,860
+and then there's a separate billing process.
+
+674
+00:31:06,460 --> 00:31:08,780
+It goes back to like finance and accounting
+
+675
+00:31:08,780 --> 00:31:11,100
+where they wouldn't be able to like,
+
+676
+00:31:11,100 --> 00:31:12,780
+if we're gonna, because ultimately we do want this
+
+677
+00:31:12,780 --> 00:31:15,500
+to inform them what they're gonna invoice partners.
+
+678
+00:31:15,500 --> 00:31:19,100
+They wouldn't be able to bifurcate those things
+
+679
+00:31:19,100 --> 00:31:20,260
+within a deal, right?
+
+680
+00:31:20,260 --> 00:31:21,700
+It would just be a total, but they would say,
+
+681
+00:31:21,700 --> 00:31:23,940
+okay, we gotta build someone that total.
+
+682
+00:31:23,940 --> 00:31:25,900
+And I think currently, Christine,
+
+683
+00:31:25,900 --> 00:31:26,740
+this is where I could use your help.
+
+684
+00:31:26,740 --> 00:31:28,940
+I think currently we're billing for incremental games
+
+685
+00:31:28,940 --> 00:31:30,500
+separately from the total
+
+686
+00:31:30,500 --> 00:31:33,340
+or are we combining those two when we send an invoice?
+
+687
+00:31:34,300 --> 00:31:36,180
+We've combined them.
+
+688
+00:31:36,180 --> 00:31:37,500
+Okay.
+
+689
+00:31:37,500 --> 00:31:40,580
+But I asked like, when we've done it.
+
+690
+00:31:40,580 --> 00:31:41,420
+Oh, sorry.
+
+691
+00:31:41,420 --> 00:31:42,260
+Go ahead, Ray.
+
+692
+00:31:42,260 --> 00:31:44,460
+I was gonna ask, if for next year,
+
+693
+00:31:44,460 --> 00:31:46,900
+are you going back to all the partners
+
+694
+00:31:46,900 --> 00:31:50,580
+and charging the additional few games worth for each?
+
+695
+00:31:50,580 --> 00:31:53,780
+Or is it now just their season long rate
+
+696
+00:31:53,780 --> 00:31:55,180
+gives them that many,
+
+697
+00:31:55,180 --> 00:31:57,860
+but new sales may have to account for more?
+
+698
+00:31:57,860 --> 00:31:58,820
+Does that make sense?
+
+699
+00:31:59,780 --> 00:32:03,020
+We, so if you send a deal two years ago,
+
+700
+00:32:03,060 --> 00:32:05,620
+you have an incremental games clause in your deal
+
+701
+00:32:05,620 --> 00:32:10,620
+and start it in, let's say, your deal rolls in next year.
+
+702
+00:32:11,500 --> 00:32:12,420
+Starting next year,
+
+703
+00:32:12,420 --> 00:32:14,500
+you will now be charged incrementally
+
+704
+00:32:14,500 --> 00:32:17,260
+versus like, I think what you're asking,
+
+705
+00:32:17,260 --> 00:32:20,000
+like Alexa Plus, we send Alexa Plus this year.
+
+706
+00:32:20,980 --> 00:32:22,900
+Actually, they have an incremental games clause too
+
+707
+00:32:22,900 --> 00:32:23,740
+in their multi-year.
+
+708
+00:32:23,740 --> 00:32:26,180
+So they signed on for whatever the quantity of games
+
+709
+00:32:26,180 --> 00:32:27,900
+was this year, but next year that's gonna grow.
+
+710
+00:32:27,900 --> 00:32:32,380
+So it's complicated.
+
+711
+00:32:33,300 --> 00:32:36,060
+I don't have an answer how to solve this.
+
+712
+00:32:37,060 --> 00:32:40,500
+Well, my thought is you could back into this in a way.
+
+713
+00:32:40,500 --> 00:32:45,500
+So like, if you now have 2027 rate card
+
+714
+00:32:45,660 --> 00:32:48,300
+that we build the inventory records for next year
+
+715
+00:32:48,300 --> 00:32:51,220
+that now reflect couple additional games
+
+716
+00:32:52,100 --> 00:32:53,420
+and more inventory,
+
+717
+00:32:53,420 --> 00:32:57,060
+but the price for the full season is different,
+
+718
+00:32:57,060 --> 00:32:59,580
+you could look at, for this client,
+
+719
+00:32:59,580 --> 00:33:03,900
+for this particular asset that you sold them,
+
+720
+00:33:03,900 --> 00:33:05,940
+they paid this much in 2026,
+
+721
+00:33:05,940 --> 00:33:08,420
+and then for 2027, they paid this much
+
+722
+00:33:08,420 --> 00:33:13,340
+and you could probably back out the escalator amount
+
+723
+00:33:13,340 --> 00:33:16,060
+and see this is how much incremental
+
+724
+00:33:16,060 --> 00:33:17,580
+it got you potentially.
+
+725
+00:33:17,580 --> 00:33:18,920
+Does that make sense?
+
+726
+00:33:18,920 --> 00:33:19,760
+It does, yeah.
+
+727
+00:33:19,760 --> 00:33:20,600
+Do you think that's a report
+
+728
+00:33:20,600 --> 00:33:23,260
+that we would be able to run within Dynamics?
+
+729
+00:33:23,260 --> 00:33:27,180
+I'm sure we can create some sort of way
+
+730
+00:33:27,180 --> 00:33:28,420
+to run the calculation
+
+731
+00:33:28,420 --> 00:33:31,740
+and then we would have it in a field
+
+732
+00:33:33,060 --> 00:33:35,420
+that you could put into a report.
+
+733
+00:33:35,420 --> 00:33:38,500
+And so just so I'm clear what you're saying
+
+734
+00:33:38,500 --> 00:33:41,340
+is in that scenario, you're running a report that says,
+
+735
+00:33:41,340 --> 00:33:45,380
+okay, in 27, their baseline deal was X.
+
+736
+00:33:45,380 --> 00:33:47,660
+And since it was a multi-year, their escalator was X.
+
+737
+00:33:47,660 --> 00:33:49,460
+So there's some incremental there.
+
+738
+00:33:50,460 --> 00:33:51,820
+And then, but the total deal
+
+739
+00:33:51,820 --> 00:33:53,060
+maybe shows a little bit more.
+
+740
+00:33:53,060 --> 00:33:56,300
+So then you would say, okay, well that's naturally
+
+741
+00:33:56,300 --> 00:33:58,580
+from incremental games.
+
+742
+00:33:58,580 --> 00:34:01,940
+I think that.
+
+743
+00:34:01,940 --> 00:34:04,660
+If that's a fair assumption or not.
+
+744
+00:34:04,660 --> 00:34:07,540
+And if it's not, I don't want you guys to report that
+
+745
+00:34:07,540 --> 00:34:09,060
+and say like.
+
+746
+00:34:09,060 --> 00:34:09,900
+Yeah, yeah.
+
+747
+00:34:09,900 --> 00:34:13,140
+I'm just thinking like, are there other scenarios
+
+748
+00:34:13,140 --> 00:34:15,620
+that like an upsell, for example,
+
+749
+00:34:15,620 --> 00:34:19,140
+like if you upsold them, I guess you would have,
+
+750
+00:34:19,140 --> 00:34:20,300
+you'd have an amendment though
+
+751
+00:34:20,300 --> 00:34:22,220
+to say what the upsell was.
+
+752
+00:34:22,220 --> 00:34:23,660
+So I guess even in that scenario,
+
+753
+00:34:23,660 --> 00:34:28,200
+you should be able to say this was incremental.
+
+754
+00:34:29,100 --> 00:34:31,220
+I think we would compare one line item
+
+755
+00:34:31,220 --> 00:34:32,900
+from one year to the next.
+
+756
+00:34:33,740 --> 00:34:38,740
+And you could say excluding the escalator,
+
+757
+00:34:39,140 --> 00:34:41,980
+this is how much more or somehow less
+
+758
+00:34:41,980 --> 00:34:45,380
+if for some reason like it came out that way,
+
+759
+00:34:45,380 --> 00:34:46,900
+but you could show the difference,
+
+760
+00:34:46,900 --> 00:34:51,900
+the delta of what the partner is paying for that item.
+
+761
+00:34:54,660 --> 00:34:57,180
+It's mostly looking at it on the whole deal
+
+762
+00:34:57,180 --> 00:34:58,740
+because you may add new items
+
+763
+00:34:58,740 --> 00:35:00,620
+and that wouldn't give you the right.
+
+764
+00:35:02,060 --> 00:35:03,420
+It's interesting because when we,
+
+765
+00:35:03,420 --> 00:35:06,420
+so like I sort of think of this like taking the contract
+
+766
+00:35:06,420 --> 00:35:09,860
+as like the ultimate, you know,
+
+767
+00:35:11,700 --> 00:35:15,100
+it's like our Bible, it's how we know exactly
+
+768
+00:35:15,100 --> 00:35:16,540
+what's in their deal, what we're charging them, right?
+
+769
+00:35:16,540 --> 00:35:20,500
+Like I think the ideal scenario is that
+
+770
+00:35:20,500 --> 00:35:21,500
+when you build a deal,
+
+771
+00:35:21,500 --> 00:35:22,820
+because we pitched this way too.
+
+772
+00:35:22,820 --> 00:35:25,340
+So like when we put a poll's on front of someone,
+
+773
+00:35:25,340 --> 00:35:26,220
+you know, we start off saying,
+
+774
+00:35:26,220 --> 00:35:27,980
+hey, here's all the things
+
+775
+00:35:27,980 --> 00:35:29,620
+that we're gonna pitch you in your deal.
+
+776
+00:35:29,620 --> 00:35:33,500
+And as a WNBA grows and adds games
+
+777
+00:35:33,500 --> 00:35:35,980
+based on whatever is in your package,
+
+778
+00:35:35,980 --> 00:35:37,780
+like we may charge you for that, right?
+
+779
+00:35:37,780 --> 00:35:39,980
+Based on if it's executed or not or home and away,
+
+780
+00:35:39,980 --> 00:35:41,940
+like there's some different complexities there.
+
+781
+00:35:41,940 --> 00:35:43,260
+And then playoff, same thing, right?
+
+782
+00:35:43,260 --> 00:35:44,820
+So actually think of it kind of similar
+
+783
+00:35:44,820 --> 00:35:46,420
+to how we're building playoffs.
+
+784
+00:35:46,420 --> 00:35:47,860
+I think the ideal scenario
+
+785
+00:35:47,860 --> 00:35:49,660
+is that we'd have the ability
+
+786
+00:35:49,660 --> 00:35:54,660
+to add the incremental games inventory within Dynamics
+
+787
+00:35:54,660 --> 00:35:57,340
+to be able to then have that run separately.
+
+788
+00:35:57,340 --> 00:35:58,940
+Now it needs to obviously,
+
+789
+00:35:58,940 --> 00:36:00,700
+similar to however, playoffs is gonna show up.
+
+790
+00:36:00,700 --> 00:36:03,260
+I know we haven't built playoffs out yet, but,
+
+791
+00:36:03,260 --> 00:36:04,860
+and it's probably, I mean,
+
+792
+00:36:04,860 --> 00:36:06,460
+it's not a good thing we're not making playoffs,
+
+793
+00:36:06,460 --> 00:36:08,900
+but for this project, it makes it easier right now
+
+794
+00:36:08,900 --> 00:36:11,340
+because playoffs would be starting relatively soon.
+
+795
+00:36:13,060 --> 00:36:16,060
+But that's how I think is the best way to achieve it
+
+796
+00:36:16,060 --> 00:36:19,020
+because it's also gonna be way more clear,
+
+797
+00:36:19,020 --> 00:36:21,540
+I think for Christine and team
+
+798
+00:36:21,540 --> 00:36:23,580
+on like what specific benefits
+
+799
+00:36:23,580 --> 00:36:25,980
+need to be activated incrementally.
+
+800
+00:36:25,980 --> 00:36:27,140
+Cause otherwise Christine,
+
+801
+00:36:27,140 --> 00:36:29,740
+it just blends into the like holistic inventory
+
+802
+00:36:29,740 --> 00:36:31,500
+and it's gonna look like and track
+
+803
+00:36:31,500 --> 00:36:33,780
+that it's like a regular season thing
+
+804
+00:36:33,780 --> 00:36:35,700
+that you're supposed to deliver,
+
+805
+00:36:35,700 --> 00:36:36,540
+which it kind of is,
+
+806
+00:36:36,540 --> 00:36:38,140
+but it's actually due to the fact
+
+807
+00:36:38,140 --> 00:36:39,660
+that there's growing games.
+
+808
+00:36:41,100 --> 00:36:45,860
+Is it, you would want an incremental game,
+
+809
+00:36:45,900 --> 00:36:49,220
+or incremental game revenue line item on the deal,
+
+810
+00:36:49,220 --> 00:36:51,580
+but for every item in the deal?
+
+811
+00:36:53,620 --> 00:36:54,460
+Would you double the amount of the deal?
+
+812
+00:36:54,460 --> 00:36:58,820
+Well, you can only deliver, it's so nuanced
+
+813
+00:36:58,820 --> 00:37:01,820
+because certain inventory you can't deliver
+
+814
+00:37:01,820 --> 00:37:03,100
+for certain, like, you know,
+
+815
+00:37:03,100 --> 00:37:04,380
+there's also like national TV
+
+816
+00:37:04,380 --> 00:37:06,300
+versus local and local court, national court.
+
+817
+00:37:06,300 --> 00:37:08,780
+I mean, it's complex, but,
+
+818
+00:37:08,780 --> 00:37:12,540
+and so, you know, is every inventory,
+
+819
+00:37:12,540 --> 00:37:13,900
+there are some inventory items
+
+820
+00:37:13,900 --> 00:37:15,460
+that absolutely would be every game.
+
+821
+00:37:15,460 --> 00:37:17,100
+Like if you have season tickets
+
+822
+00:37:17,100 --> 00:37:19,220
+or I mean, really anything that you have
+
+823
+00:37:19,220 --> 00:37:22,620
+that we could deliver on an every game basis,
+
+824
+00:37:22,620 --> 00:37:24,940
+conceivably could be delivered for incremental games.
+
+825
+00:37:24,940 --> 00:37:26,980
+But then there's nuances to that
+
+826
+00:37:26,980 --> 00:37:28,860
+when you work with League rules
+
+827
+00:37:28,860 --> 00:37:30,420
+on a nationally televised game
+
+828
+00:37:30,420 --> 00:37:31,940
+versus a locally televised game, right?
+
+829
+00:37:31,940 --> 00:37:35,380
+So maybe it'd be helpful
+
+830
+00:37:35,380 --> 00:37:39,100
+if we sent you one of the more complex clauses
+
+831
+00:37:39,100 --> 00:37:41,980
+that we have that outlines incremental games.
+
+832
+00:37:41,980 --> 00:37:43,820
+Christine, I don't, maybe we can think about that,
+
+833
+00:37:43,820 --> 00:37:45,900
+but maybe you guys could just look at that
+
+834
+00:37:45,900 --> 00:37:47,820
+and read that and give you a better sense
+
+835
+00:37:47,820 --> 00:37:51,380
+for how it's, you know, how it's laid out.
+
+836
+00:37:51,380 --> 00:37:54,220
+But I think my vision would be,
+
+837
+00:37:54,220 --> 00:37:57,180
+and by the way, I'm open to other ways of doing this.
+
+838
+00:37:57,180 --> 00:37:59,860
+To me, it seems like it would be the cleanest
+
+839
+00:37:59,860 --> 00:38:01,820
+and most representative of a contract
+
+840
+00:38:01,820 --> 00:38:05,140
+in how we're doing deals is that within a deal,
+
+841
+00:38:05,140 --> 00:38:07,260
+you're building a deal and you're building out,
+
+842
+00:38:07,260 --> 00:38:08,420
+you know, in the 26th season,
+
+843
+00:38:08,420 --> 00:38:10,100
+when we close the deal now, it's like, great,
+
+844
+00:38:10,100 --> 00:38:12,900
+you know, here's the deal for 26.
+
+845
+00:38:12,900 --> 00:38:14,460
+When incremental games are added,
+
+846
+00:38:14,460 --> 00:38:17,260
+here are the benefits that are going to be associated
+
+847
+00:38:17,260 --> 00:38:18,700
+directly with those incremental games
+
+848
+00:38:18,700 --> 00:38:21,500
+and here's what that charge looks like in the future
+
+849
+00:38:21,500 --> 00:38:23,540
+and then playoff similarly, right?
+
+850
+00:38:23,540 --> 00:38:25,300
+Like with the build out playoffs
+
+851
+00:38:25,300 --> 00:38:27,320
+and then what benefits will be delivered for playoffs
+
+852
+00:38:27,320 --> 00:38:29,060
+and what the charge is for that.
+
+853
+00:38:31,820 --> 00:38:32,660
+Yeah.
+
+854
+00:38:32,660 --> 00:38:34,820
+I think that's the cleanest way to do it.
+
+855
+00:38:34,820 --> 00:38:36,700
+I mean, I don't know how on your end,
+
+856
+00:38:36,700 --> 00:38:39,220
+how that ends up like ultimately looking,
+
+857
+00:38:39,220 --> 00:38:41,020
+but like even Christine, just think about
+
+858
+00:38:41,020 --> 00:38:43,100
+how we built Alexa yesterday,
+
+859
+00:38:43,100 --> 00:38:45,460
+you know, we built the regular season
+
+860
+00:38:45,460 --> 00:38:47,440
+and there's an incremental games clause in their deal.
+
+861
+00:38:47,440 --> 00:38:49,220
+So then we would go and,
+
+862
+00:38:49,220 --> 00:38:51,380
+I don't know if it's like a new deal line or something,
+
+863
+00:38:51,380 --> 00:38:53,300
+like somehow it needs to still be affiliated
+
+864
+00:38:53,300 --> 00:38:54,300
+with the deal, right?
+
+865
+00:38:54,300 --> 00:38:56,380
+But we would then go and build out
+
+866
+00:38:56,380 --> 00:38:58,280
+the incremental games deal lines
+
+867
+00:38:58,280 --> 00:39:00,140
+and then the playoff deal lines.
+
+868
+00:39:02,860 --> 00:39:06,460
+I think in my head, the mechanics of it in dynamics,
+
+869
+00:39:06,460 --> 00:39:08,780
+we just need to figure out if it's
+
+870
+00:39:08,780 --> 00:39:13,420
+one flat incremental revenue line item that goes to the deal
+
+871
+00:39:13,420 --> 00:39:15,180
+or if it's on every line item
+
+872
+00:39:15,180 --> 00:39:18,180
+so that you can distinguish how much more you made
+
+873
+00:39:18,180 --> 00:39:20,140
+for this particular asset.
+
+874
+00:39:20,140 --> 00:39:23,780
+I guess that would be kind of like a question
+
+875
+00:39:23,780 --> 00:39:24,620
+I'm throwing back to you.
+
+876
+00:39:24,620 --> 00:39:26,460
+Is that something like you'll end up needing to do?
+
+877
+00:39:26,460 --> 00:39:27,300
+Yeah.
+
+878
+00:39:28,500 --> 00:39:31,260
+I mean, Christine, I think they're broken out
+
+879
+00:39:31,260 --> 00:39:33,220
+usually as like, if it's a package
+
+880
+00:39:33,220 --> 00:39:37,260
+that can continue versus like an individual element,
+
+881
+00:39:37,260 --> 00:39:42,260
+I think it would cause us to be
+
+882
+00:39:42,740 --> 00:39:45,500
+a little bit more detailed on the pricing of them
+
+883
+00:39:45,500 --> 00:39:47,820
+because it's possible that some of these incremental games
+
+884
+00:39:47,820 --> 00:39:49,620
+clauses might say like,
+
+885
+00:39:49,620 --> 00:39:50,740
+for every game we can deliver
+
+886
+00:39:50,740 --> 00:39:53,220
+one additional broadcast spot, I'm making this up,
+
+887
+00:39:53,220 --> 00:39:55,140
+one additional period and two additional tickets
+
+888
+00:39:55,140 --> 00:39:57,140
+to a game within the clause.
+
+889
+00:39:57,140 --> 00:40:00,380
+We might just say, therefore we charge you X per home game.
+
+890
+00:40:01,740 --> 00:40:05,140
+So that math was done on an Excel spreadsheet somewhere
+
+891
+00:40:06,140 --> 00:40:08,900
+but it wouldn't, what doesn't live in dynamics in that way.
+
+892
+00:40:08,900 --> 00:40:11,300
+So yeah, we would, it would be like pulling
+
+893
+00:40:11,300 --> 00:40:14,860
+individual inventory line items.
+
+894
+00:40:14,860 --> 00:40:19,860
+And there's, yeah, there's another layer of complexity
+
+895
+00:40:20,740 --> 00:40:24,300
+it was like it does add incremental inventory
+
+896
+00:40:24,300 --> 00:40:26,460
+but I think that floats back up to like the quantity
+
+897
+00:40:26,460 --> 00:40:28,340
+of games we can deliver each season, right?
+
+898
+00:40:28,340 --> 00:40:30,460
+At a high level, like that would automatically
+
+899
+00:40:30,460 --> 00:40:31,860
+expand the inventory.
+
+900
+00:40:32,700 --> 00:40:35,540
+Yes.
+
+901
+00:40:35,540 --> 00:40:40,540
+I think, I think we want to,
+
+902
+00:40:40,900 --> 00:40:43,340
+because I also don't want it to be where like,
+
+903
+00:40:43,340 --> 00:40:46,860
+you're doing double the line deal line items all the time.
+
+904
+00:40:46,860 --> 00:40:49,860
+So I want to think through the process a little bit.
+
+905
+00:40:49,860 --> 00:40:52,580
+So if you send any details you have,
+
+906
+00:40:52,580 --> 00:40:56,060
+maybe we can kind of stew on it a bit
+
+907
+00:40:56,060 --> 00:40:59,500
+and think about how this would be,
+
+908
+00:40:59,500 --> 00:41:00,540
+this would need to be tracked.
+
+909
+00:41:01,540 --> 00:41:04,860
+But it sounds like you do almost kind of need it
+
+910
+00:41:04,860 --> 00:41:07,140
+on a per line basis.
+
+911
+00:41:07,140 --> 00:41:09,180
+It may not be something you'll have to add every year
+
+912
+00:41:09,180 --> 00:41:11,300
+because obviously you're not adding games every year
+
+913
+00:41:11,300 --> 00:41:15,540
+but for next year, this would be applicable, so.
+
+914
+00:41:15,540 --> 00:41:16,900
+Yeah.
+
+915
+00:41:16,900 --> 00:41:19,500
+And to make it more complicated,
+
+916
+00:41:19,500 --> 00:41:20,820
+everybody's a little different
+
+917
+00:41:20,820 --> 00:41:22,340
+because the W keeps adding games.
+
+918
+00:41:22,340 --> 00:41:24,740
+So if you have like a longer contract,
+
+919
+00:41:24,740 --> 00:41:26,460
+you might have signed up with us when you,
+
+920
+00:41:26,460 --> 00:41:28,300
+when we had, you know, I'm just gonna make it up
+
+921
+00:41:28,340 --> 00:41:31,220
+but like 40 games and then you signed up this year,
+
+922
+00:41:31,220 --> 00:41:33,820
+you have 44 games and then, you know,
+
+923
+00:41:33,820 --> 00:41:34,860
+so next year goes to 50.
+
+924
+00:41:34,860 --> 00:41:37,780
+So some people are gonna have, you know, 10 extra games.
+
+925
+00:41:37,780 --> 00:41:39,260
+Some people have eight, some people have four.
+
+926
+00:41:39,260 --> 00:41:42,260
+Like it's, so we need to just make sure
+
+927
+00:41:42,260 --> 00:41:44,860
+that it accounts for the differences within a deal.
+
+928
+00:41:44,860 --> 00:41:46,780
+Like it's not gonna be equal for everybody
+
+929
+00:41:46,780 --> 00:41:47,940
+if that makes sense.
+
+930
+00:41:49,580 --> 00:41:51,180
+Yeah, that makes sense.
+
+931
+00:41:51,180 --> 00:41:53,020
+Record actively, like, I don't know
+
+932
+00:41:53,020 --> 00:41:55,060
+if it'll be as easy to like,
+
+933
+00:41:55,060 --> 00:41:57,340
+get all this calculated and into dynamics
+
+934
+00:41:57,380 --> 00:42:00,380
+but I think from 26 and forward,
+
+935
+00:42:00,380 --> 00:42:02,460
+we can definitely build that out
+
+936
+00:42:02,460 --> 00:42:04,260
+or figure out how to track that.
+
+937
+00:42:10,940 --> 00:42:13,580
+When was the last number of games changed?
+
+938
+00:42:13,580 --> 00:42:14,740
+Was it this year?
+
+939
+00:42:15,580 --> 00:42:17,540
+It was, I think, I think we've been flat
+
+940
+00:42:17,540 --> 00:42:19,860
+for two years now.
+
+941
+00:42:19,860 --> 00:42:23,060
+So is where are we at now, 46?
+
+942
+00:42:23,060 --> 00:42:24,300
+44.
+
+943
+00:42:24,300 --> 00:42:25,460
+44, yeah.
+
+944
+00:42:25,460 --> 00:42:29,900
+And I think, so three seasons ago, we were at 40.
+
+945
+00:42:32,420 --> 00:42:33,260
+Yeah.
+
+946
+00:42:33,260 --> 00:42:36,020
+And next year is like confirmed, we'll be at 50.
+
+947
+00:42:38,100 --> 00:42:39,900
+And I think there's a chance we could grow more.
+
+948
+00:42:39,900 --> 00:42:42,460
+It's so unique to the W, no other league does this.
+
+949
+00:42:42,460 --> 00:42:43,820
+It's so unique to the WNBI,
+
+950
+00:42:43,820 --> 00:42:44,660
+but it's like, you know,
+
+951
+00:42:44,660 --> 00:42:45,820
+how you grow the whole pie and everything.
+
+952
+00:42:45,820 --> 00:42:47,540
+I mean, it's a conversation that
+
+953
+00:42:47,540 --> 00:42:49,460
+partnership teams are having all the time
+
+954
+00:42:49,460 --> 00:42:51,340
+because it's like you signed these multi-year deals
+
+955
+00:42:51,340 --> 00:42:53,420
+that are locked in and all of a sudden,
+
+956
+00:42:53,420 --> 00:42:54,700
+we're adding eight games.
+
+957
+00:42:54,700 --> 00:42:56,700
+I mean, we have a partner right now
+
+958
+00:42:56,700 --> 00:42:58,260
+that signed a 10 year deal with us
+
+959
+00:42:58,260 --> 00:42:59,580
+during your like seven or eight.
+
+960
+00:42:59,580 --> 00:43:02,260
+And I mean, when we go to 50,
+
+961
+00:43:02,260 --> 00:43:05,100
+they're probably getting like 14 games for free
+
+962
+00:43:05,100 --> 00:43:07,420
+or something that's pretty crazy.
+
+963
+00:43:07,420 --> 00:43:08,540
+Yeah.
+
+964
+00:43:08,540 --> 00:43:11,100
+It is the first I've heard of it.
+
+965
+00:43:11,100 --> 00:43:12,620
+I mean, I know like,
+
+966
+00:43:12,620 --> 00:43:15,420
+NFO went to an extra regular season game
+
+967
+00:43:15,420 --> 00:43:18,620
+versus one less preseason,
+
+968
+00:43:18,620 --> 00:43:20,540
+but generally speaking, the number of games
+
+969
+00:43:20,540 --> 00:43:23,420
+is relatively flat elsewhere, I think.
+
+970
+00:43:23,420 --> 00:43:24,260
+Yeah.
+
+971
+00:43:24,300 --> 00:43:25,380
+It's unique to you guys,
+
+972
+00:43:25,380 --> 00:43:27,100
+a little bit more so than others.
+
+973
+00:43:27,100 --> 00:43:28,060
+Totally.
+
+974
+00:43:28,060 --> 00:43:29,940
+It requires quite an education process
+
+975
+00:43:29,940 --> 00:43:30,900
+for the prospect too,
+
+976
+00:43:30,900 --> 00:43:32,140
+because like if they're buying sports,
+
+977
+00:43:32,140 --> 00:43:33,820
+they'd never heard of this, you know?
+
+978
+00:43:33,820 --> 00:43:34,660
+So,
+
+979
+00:43:36,260 --> 00:43:37,620
+like what do you mean you're gonna charge us
+
+980
+00:43:37,620 --> 00:43:39,460
+even more the following year?
+
+981
+00:43:42,500 --> 00:43:43,340
+Makes sense.
+
+982
+00:43:43,340 --> 00:43:45,420
+I think we can think through the mechanics
+
+983
+00:43:45,420 --> 00:43:46,740
+of that one a little bit more,
+
+984
+00:43:46,740 --> 00:43:49,180
+but we have a few action items here,
+
+985
+00:43:49,180 --> 00:43:53,380
+I think as far as like getting you some lists of deals,
+
+986
+00:43:53,380 --> 00:43:56,140
+checking on the deal totals and so on,
+
+987
+00:43:56,140 --> 00:43:59,500
+and flipping, getting you a list of deals to flip
+
+988
+00:43:59,500 --> 00:44:00,460
+to close one,
+
+989
+00:44:00,460 --> 00:44:02,300
+I'll have you confirm that Christine,
+
+990
+00:44:03,660 --> 00:44:06,180
+and then we'll update some of the list views
+
+991
+00:44:06,180 --> 00:44:07,300
+and reporting if need be,
+
+992
+00:44:07,300 --> 00:44:10,180
+but those should start looking better once we do that.
+
+993
+00:44:11,500 --> 00:44:12,940
+Yeah, looking forward to it.
+
+994
+00:44:14,020 --> 00:44:16,620
+Yeah, I think we can get you something here, see.
+
+995
+00:44:18,620 --> 00:44:21,580
+And I'll finish up the final deal today.
+
+996
+00:44:22,540 --> 00:44:24,820
+So I think we'll be very close,
+
+997
+00:44:24,820 --> 00:44:26,340
+and we are very close right now.
+
+998
+00:44:27,420 --> 00:44:30,500
+I know we have this list,
+
+999
+00:44:30,500 --> 00:44:32,780
+so if we have any questions on it,
+
+1000
+00:44:32,780 --> 00:44:33,620
+we'll let you know,
+
+1001
+00:44:33,620 --> 00:44:36,340
+I know we've only sort of started digesting it
+
+1002
+00:44:36,340 --> 00:44:37,180
+mostly today,
+
+1003
+00:44:37,180 --> 00:44:40,820
+so if anything doesn't make sense, we'll reach out.
+
+1004
+00:44:41,780 --> 00:44:43,340
+Cool, and Christine just confirming
+
+1005
+00:44:43,340 --> 00:44:44,500
+the couple of things I mentioned,
+
+1006
+00:44:44,500 --> 00:44:47,060
+like the deal line view
+
+1007
+00:44:47,060 --> 00:44:48,260
+where we have to go to multiple pages,
+
+1008
+00:44:48,260 --> 00:44:49,420
+is that on here?
+
+1009
+00:44:50,420 --> 00:44:52,220
+Probably not, no.
+
+1010
+00:44:52,220 --> 00:44:56,340
+I can get it added to manual here,
+
+1011
+00:44:56,340 --> 00:44:59,300
+and I have a few other notes I'll make here.
+
+1012
+00:44:59,300 --> 00:45:00,140
+Okay, great.
+
+1013
+00:45:00,140 --> 00:45:01,540
+Yeah, and that totals thing too,
+
+1014
+00:45:01,540 --> 00:45:03,380
+would be very nice if it totalled.
+
+1015
+00:45:04,740 --> 00:45:06,460
+Yeah, 100%.
+
+1016
+00:45:06,460 --> 00:45:09,460
+That one I know is probably easier to achieve.
+
+1017
+00:45:09,460 --> 00:45:13,340
+I think the list at the bottom with all the deal lines,
+
+1018
+00:45:13,340 --> 00:45:15,620
+I think we'll have to just work through that one
+
+1019
+00:45:15,620 --> 00:45:16,460
+a little bit,
+
+1020
+00:45:16,460 --> 00:45:18,860
+but we'll figure something out there.
+
+1021
+00:45:18,940 --> 00:45:19,780
+Okay.
+
+1022
+00:45:23,180 --> 00:45:25,660
+We're well over time, sorry.
+
+1023
+00:45:25,660 --> 00:45:29,540
+No worries, luckily my next call,
+
+1024
+00:45:29,540 --> 00:45:31,140
+10, 30 years on my guess,
+
+1025
+00:45:31,140 --> 00:45:32,700
+just canceled SIP.
+
+1026
+00:45:32,700 --> 00:45:33,940
+Oh, we got lucky.
+
+1027
+00:45:35,740 --> 00:45:38,700
+Obviously if you're still building out any deals today
+
+1028
+00:45:38,700 --> 00:45:40,420
+and have an issue, let us know.
+
+1029
+00:45:40,420 --> 00:45:42,900
+We'll try to get some answers or info back to you,
+
+1030
+00:45:42,900 --> 00:45:46,260
+but I think we're getting close to where
+
+1031
+00:45:46,260 --> 00:45:48,940
+like the track integration will turn on soon.
+
+1032
+00:45:49,980 --> 00:45:51,980
+We'll have to figure out some of the pipeline stuff,
+
+1033
+00:45:51,980 --> 00:45:56,980
+but I think we can also help Tiffany and Bridget
+
+1034
+00:45:57,900 --> 00:45:59,420
+get some of those in if they need,
+
+1035
+00:45:59,420 --> 00:46:02,140
+or if they just need any guidance on it,
+
+1036
+00:46:02,140 --> 00:46:03,260
+definitely let us know.
+
+1037
+00:46:04,980 --> 00:46:06,020
+Yeah.
+
+1038
+00:46:06,020 --> 00:46:06,860
+Sounds good.
+
+1039
+00:46:08,700 --> 00:46:09,860
+Cool.
+
+1040
+00:46:09,860 --> 00:46:10,940
+Thanks, y'all.
+
+1041
+00:46:10,940 --> 00:46:12,580
+Yeah, have a good weekend,
+
+1042
+00:46:12,580 --> 00:46:14,420
+have fun on the trip.
+
+1043
+00:46:14,420 --> 00:46:15,260
+Thanks.
+
+1044
+00:46:16,100 --> 00:46:17,380
+We need to win, okay?
+
+1045
+00:46:17,380 --> 00:46:18,220
+We need to win.
+
+1046
+00:46:18,220 --> 00:46:21,140
+So put good vibes forward for a win for us.
+
+1047
+00:46:21,140 --> 00:46:22,460
+Sending it your way.
+
+1048
+00:46:23,900 --> 00:46:26,220
+All right, thanks, see you guys later.
+
+1049
+00:46:26,220 --> 00:46:27,060
+Bye-bye.
+

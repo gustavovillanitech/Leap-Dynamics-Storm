@@ -1,4 +1,4 @@
-﻿using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System;
 
@@ -60,19 +60,33 @@ namespace Pl.Inventory.TotalCalculatedField
 					inventory["new_total"] = new Money(totalCalculation);
 
 					tracingService.Trace("Total calculation successful: {0}", totalCalculation);
-					
-					// Mirror 'Is Package' from the related Product (keeps inventory in sync with the product flag)
+
+					// Mirror 'Is Package' and the descriptions from the related Product.
+					// Keeps inventory in sync with the product: the description is the same across all
+					// seasons (no per-season override), so we always pull from the product.
+					//   External description: product.new_descriptionorspecifications -> inventory.new_description  (syncs to Trak "specifications")
+					//   Internal description: product.new_internaldescription        -> inventory.new_internaldescription (Dynamics-only)
 					EntityReference productRef = null;
 					if (inventory.Contains("new_productid") && inventory["new_productid"] != null)
 						productRef = inventory.GetAttributeValue<EntityReference>("new_productid");
 					else if (context.PreEntityImages.Contains("PreImage") && context.PreEntityImages["PreImage"].Contains("new_productid"))
 						productRef = context.PreEntityImages["PreImage"].GetAttributeValue<EntityReference>("new_productid");
-					
+
 					if (productRef != null)
 					{
-						Entity product = service.Retrieve("new_product", productRef.Id, new ColumnSet("new_ispackage"));
+						Entity product = service.Retrieve("new_product", productRef.Id,
+							new ColumnSet("new_ispackage", "new_descriptionorspecifications", "new_internaldescription"));
+
 						inventory["new_ispackage"] = product.GetAttributeValue<bool>("new_ispackage");
-						tracingService.Trace("Is Package mirrored from product: {0}", inventory["new_ispackage"]);
+
+						// Mirror both descriptions one-to-one from the product.
+						inventory["new_description"] = product.GetAttributeValue<string>("new_descriptionorspecifications");
+						inventory["new_internaldescription"] = product.GetAttributeValue<string>("new_internaldescription");
+
+						tracingService.Trace("Mirrored from product -> IsPackage: {0}, ExternalDesc set: {1}, InternalDesc set: {2}",
+							inventory["new_ispackage"],
+							inventory["new_description"] != null,
+							inventory["new_internaldescription"] != null);
 					}
 				}
 				catch (Exception ex)
