@@ -11,6 +11,8 @@
     <Project Path="Consoles/LoadDescriptions/LoadDescriptions.csproj" Id="e3a2bba4-bb29-4f5e-a4cc-ec960da96bf0" />
     <Project Path="Consoles/MirrorInventoryToSandbox/MirrorInventoryToSandbox.csproj" Id="21e0b954-ac78-4dcb-9ab9-88a1bfc12335" />
     <Project Path="Consoles/MultiYearReadiness/MultiYearReadiness.csproj" Id="405de698-0603-4cbd-81b0-a47fe766614d" />
+    <Project Path="Consoles/RateCardCleanupAudit/RateCardCleanupAudit.csproj" Id="00efb21d-db6d-425f-8baa-e77c44d124c0" />
+    <Project Path="Consoles/EscalatorRenewalExport/EscalatorRenewalExport.csproj" Id="e6180258-95dd-4215-8742-0c9642b2f2c5" />
     <Project Path="Consoles/TrakImport/TrakImport.csproj" />
     <Project Path="Consoles/UpdateActualRevenueOpportunities/UpdateActualRevenueOpportunities.csproj" Id="81c76b95-3345-4d5c-8de7-4305b34903db" />
     <Project Path="Consoles/UpdateRateCard/UpdateRateCard.csproj" Id="ae4692a7-4e33-4bd3-98db-e821cf25e5bf" />

@@ -33,7 +33,7 @@ DealLineForm.onInventoryChange = function (executionContext) {
      * Query the Inventory table to retrieve the Product lookup AND the single Rate.
      * Ensure "new_rate" is the actual logical name of the price field on the Inventory entity.
      */
-    var selectQuery = "?$select=_new_productid_value,new_rate";
+    var selectQuery = "?$select=_new_productid_value,new_rate,new_description,new_internaldescription";
 
     Xrm.WebApi.retrieveRecord("new_inventory", inventoryId, selectQuery).then(
         function success(result) {
@@ -67,6 +67,14 @@ DealLineForm.onInventoryChange = function (executionContext) {
             if (rateAttr) rateAttr.setValue(inventoryRate);
             if (rateCardAttr) rateCardAttr.setValue(inventoryRate);
 
+            // 2b. Mirror the descriptions from the Inventory onto the Deal Line record
+            // (external -> new_description, internal -> new_internaldescription) so they can be
+            // shown in the Deal Lines list at the bottom of the deal page.
+            var descAttr = formContext.getAttribute("new_description");
+            var intDescAttr = formContext.getAttribute("new_internaldescription");
+            if (descAttr) descAttr.setValue(result["new_description"] || null);
+            if (intDescAttr) intDescAttr.setValue(result["new_internaldescription"] || null);
+
             // 3. NOW trigger the math!
             DealLineForm.calculateFinancialMetrics(executionContext);
         },
@@ -84,8 +92,10 @@ DealLineForm.onInventoryChange = function (executionContext) {
     );
 };
 /**
- * Triggered on the OnChange event of 'new_quantity', 'new_rate', 'new_ratecard', or 'new_discount'.
+ * Triggered on the OnChange event of 'new_quantity', 'new_rate', 'new_ratecard', 'new_discount',
+ * or 'new_linetotaloverride'. (Wire this handler to the OnChange of new_linetotaloverride on the form.)
  * Calculates Discount, Total, List Rate, Gain/Loss, and Yield dynamically on the form.
+ * If 'new_linetotaloverride' has a value, it takes precedence over Quantity x Rate for the Total.
  * @param {object} executionContext 
  */
 DealLineForm.calculateFinancialMetrics = function (executionContext) {
@@ -102,6 +112,10 @@ DealLineForm.calculateFinancialMetrics = function (executionContext) {
     var listRateAttr = formContext.getAttribute("new_listrate");
     var gainLossAttr = formContext.getAttribute("new_gainloss");
     var yieldAttr = formContext.getAttribute("new_yield");
+
+    // Line Total Override (Money): when set, it wins over Quantity x Rate for the Total.
+    var overrideAttr = formContext.getAttribute("new_linetotaloverride");
+    var overrideTotal = overrideAttr ? overrideAttr.getValue() : null;
 
     // 3. Validate that essential fields exist on the form
     if (!quantityAttr || !rateAttr || !rateCardAttr || !totalAttr) {
@@ -123,7 +137,8 @@ DealLineForm.calculateFinancialMetrics = function (executionContext) {
     }
 
     // 6. Perform the Math Calculations
-    var total = quantity * rate;
+    // If a Line Total Override was entered, use it as the Total; otherwise Quantity x Rate.
+    var total = (overrideTotal !== null && overrideTotal !== undefined) ? overrideTotal : (quantity * rate);
     var listRate = quantity * rateCard;
     var gainLoss = total - listRate;
 

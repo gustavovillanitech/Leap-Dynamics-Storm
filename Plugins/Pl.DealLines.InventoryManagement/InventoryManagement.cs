@@ -50,6 +50,9 @@ namespace Pl.DealLines.InventoryManagement
 					if (stage == 20 && (messageName == "create" || messageName == "update"))
 					{
 						CalculateDealLineMetrics(target, preImage, tracingService);
+						// Mirror the descriptions from the selected Inventory onto the Deal Line.
+						// Covers lines created outside the form (Deal Line Builder canvas app, multi-year clone).
+						MirrorInventoryDescriptionsToLine(target, service, tracingService);
 					}
 
 					// 2. POST-OPERATION: Rollup to Deal & Update Inventory Deltas
@@ -94,7 +97,11 @@ namespace Pl.DealLines.InventoryManagement
 			decimal rateCharged = GetMoneyValue(target, preImage, "new_rate");
 			decimal rateCard = GetMoneyValue(target, preImage, "new_ratecard");
 
-			decimal total = quantity * rateCharged;
+			// Line Total Override: if the user entered a manual total, it wins over Quantity x Rate.
+			// (Used for rounded amounts, e.g. a deal meant to total exactly $50,000 that qty x rate
+			//  cannot produce with a 2-decimal rate.) Null override => normal Quantity x Rate.
+			decimal? overrideTotal = GetMoneyNullable(target, preImage, "new_linetotaloverride");
+			decimal total = overrideTotal.HasValue ? overrideTotal.Value : quantity * rateCharged;
 			decimal listRate = quantity * rateCard;
 			decimal gainLoss = total - listRate;
 
@@ -110,6 +117,30 @@ namespace Pl.DealLines.InventoryManagement
 			target["new_yield"] = yieldValue;
 
 			tracingService.Trace($"Metrics Calculated -> Total: {total}, Yield: {yieldValue}");
+		}
+
+		/// <summary>
+		/// Copies the external/internal descriptions from the selected Inventory onto the Deal Line
+		/// (external -> new_description, internal -> new_internaldescription). Only runs when the
+		/// Inventory lookup is present on the Target (set on create, changed on update, or set by the
+		/// Deal Line Builder / multi-year clone) to avoid an unnecessary Retrieve on unrelated edits.
+		/// </summary>
+		private void MirrorInventoryDescriptionsToLine(Entity target, IOrganizationService service, ITracingService tracing)
+		{
+			if (!(target.Contains("new_inventory") && target["new_inventory"] is EntityReference invRef))
+				return;
+
+			try
+			{
+				Entity inv = service.Retrieve("new_inventory", invRef.Id, new ColumnSet("new_description", "new_internaldescription"));
+				target["new_description"] = inv.GetAttributeValue<string>("new_description");
+				target["new_internaldescription"] = inv.GetAttributeValue<string>("new_internaldescription");
+				tracing.Trace("Descriptions mirrored from inventory onto the deal line.");
+			}
+			catch (Exception ex)
+			{
+				tracing.Trace($"MirrorInventoryDescriptionsToLine skipped: {ex.Message}");
+			}
 		}
 
 		#endregion
@@ -386,6 +417,19 @@ namespace Pl.DealLines.InventoryManagement
 			if (preImage.Contains(attributeName))
 				return preImage.GetAttributeValue<Money>(attributeName)?.Value ?? 0m;
 			return 0m;
+		}
+
+		// Returns the Money value, or null when the field is absent OR explicitly cleared.
+		// Distinguishing null from 0 matters for the Line Total Override (null => no override).
+		// If the Target contains the attribute we honor it (including an explicit clear to null);
+		// otherwise we fall back to the PreImage so an existing override survives edits to other fields.
+		private decimal? GetMoneyNullable(Entity target, Entity preImage, string attributeName)
+		{
+			if (target.Contains(attributeName))
+				return target.GetAttributeValue<Money>(attributeName)?.Value;
+			if (preImage.Contains(attributeName))
+				return preImage.GetAttributeValue<Money>(attributeName)?.Value;
+			return null;
 		}
 
 		private Guid GetLookupId(Entity target, Entity preImage, string attributeName)
