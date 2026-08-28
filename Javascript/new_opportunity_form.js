@@ -275,15 +275,17 @@ OpportunityForm.setRequiredFields = function(formContext) {
         // AND Stage is Closed Won (100000005) or 11-Closed-Auto Renewed (100000029)
         // AND Previous Phone Call GUID is empty
         // AND Product Type is NOT FSE-Flexible Plans (100000011)
+        // AND Product Type is NOT Deposit (100000008)  -> Bryan: deposits do not require Section
         if (!isSectionRequired) {
             var oppTypesBR = [100000000, 100000002];
             var stagesBR = [100000005, 100000029];
             var isPrevCallEmpty = (prevCall === null || prevCall === "");
-            
-            if (oppTypesBR.indexOf(oppType) > -1 && 
-                stagesBR.indexOf(stage) > -1 && 
-                isPrevCallEmpty && 
-                prodType !== 100000011) {
+
+            if (oppTypesBR.indexOf(oppType) > -1 &&
+                stagesBR.indexOf(stage) > -1 &&
+                isPrevCallEmpty &&
+                prodType !== 100000011 &&
+                prodType !== 100000008) {
                 isSectionRequired = true;
             }
         }
