@@ -34,7 +34,7 @@ namespace LoadEscalatorOptions
     {
         // ============================ CONFIGURATION ============================
         private const string EnvUrl = "https://stormbasketball.crm.dynamics.com/";
-        private const bool DryRun = true;
+        private const bool DryRun = false;
 
         private const string UserName = "FanInteractive@stormbasketball.com";
         private const string Password = "CsCXbm2E-WtQ3c4DCy2!";
@@ -305,18 +305,16 @@ namespace LoadEscalatorOptions
             return all;
         }
 
+        // Match key: lowercase, keep only letters/digits (drops spaces and punctuation),
+        // so "U.S. Bank 2026" == "US Bank 2026". The ambiguity guard still protects against
+        // two different deals collapsing to the same key.
         private static string Norm(string s)
         {
             if (string.IsNullOrEmpty(s)) return "";
-            s = s.Trim().ToLowerInvariant();
             var sb = new StringBuilder();
-            bool prevSpace = false;
-            foreach (char c in s)
-            {
-                if (char.IsWhiteSpace(c)) { if (!prevSpace) sb.Append(' '); prevSpace = true; }
-                else { sb.Append(c); prevSpace = false; }
-            }
-            return sb.ToString().Trim();
+            foreach (char c in s.ToLowerInvariant())
+                if (char.IsLetterOrDigit(c)) sb.Append(c);
+            return sb.ToString();
         }
 
         private static Guid GetLookupId(Entity e, string a) => e.Contains(a) && e[a] is EntityReference r ? r.Id : Guid.Empty;

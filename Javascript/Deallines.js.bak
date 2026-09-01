@@ -33,7 +33,7 @@ DealLineForm.onInventoryChange = function (executionContext) {
      * Query the Inventory table to retrieve the Product lookup AND the single Rate.
      * Ensure "new_rate" is the actual logical name of the price field on the Inventory entity.
      */
-    var selectQuery = "?$select=_new_productid_value,new_rate,new_description,new_internaldescription,new_gamebasedasset,new_defaultautoproration";
+    var selectQuery = "?$select=_new_productid_value,new_rate,new_description,new_internaldescription";
 
     Xrm.WebApi.retrieveRecord("new_inventory", inventoryId, selectQuery).then(
         function success(result) {
@@ -75,9 +75,6 @@ DealLineForm.onInventoryChange = function (executionContext) {
             if (descAttr) descAttr.setValue(result["new_description"] || null);
             if (intDescAttr) intDescAttr.setValue(result["new_internaldescription"] || null);
 
-            // 2c. Incremental games defaults carried by the inventory item
-            DealLineForm.applyIncrementalDefaultsFromInventory(formContext, result);
-
             // 3. NOW trigger the math!
             DealLineForm.calculateFinancialMetrics(executionContext);
         },
@@ -116,14 +113,9 @@ DealLineForm.calculateFinancialMetrics = function (executionContext) {
     var gainLossAttr = formContext.getAttribute("new_gainloss");
     var yieldAttr = formContext.getAttribute("new_yield");
 
-    // Line Total Override (Money): when set, it wins over Quantity x Rate for the base.
+    // Line Total Override (Money): when set, it wins over Quantity x Rate for the Total.
     var overrideAttr = formContext.getAttribute("new_linetotaloverride");
     var overrideTotal = overrideAttr ? overrideAttr.getValue() : null;
-
-    // Incremental Revenue (Money): revenue attributed to the additional games.
-    // It is added on top of the base; it never replaces it.
-    var incrementalAttr = formContext.getAttribute("new_incrementalrevenue");
-    var incrementalRevenue = incrementalAttr ? (incrementalAttr.getValue() || 0) : 0;
 
     // 3. Validate that essential fields exist on the form
     if (!quantityAttr || !rateAttr || !rateCardAttr || !totalAttr) {
@@ -145,13 +137,8 @@ DealLineForm.calculateFinancialMetrics = function (executionContext) {
     }
 
     // 6. Perform the Math Calculations
-    // Base: if a Line Total Override was entered it wins over Quantity x Rate.
-    // Total: base plus the incremental game revenue for this line.
-    // NOTE: Delivered Quantity is deliberately absent from every formula here.
-    // Quantity is what the contracted price covers; Delivered Quantity is what
-    // the partner receives. Mixing them would double-count the extra games.
-    var baseTotal = (overrideTotal !== null && overrideTotal !== undefined) ? overrideTotal : (quantity * rate);
-    var total = baseTotal + incrementalRevenue;
+    // If a Line Total Override was entered, use it as the Total; otherwise Quantity x Rate.
+    var total = (overrideTotal !== null && overrideTotal !== undefined) ? overrideTotal : (quantity * rate);
     var listRate = quantity * rateCard;
     var gainLoss = total - listRate;
 
@@ -166,115 +153,5 @@ DealLineForm.calculateFinancialMetrics = function (executionContext) {
     if (gainLossAttr) gainLossAttr.setValue(gainLoss);
     if (yieldAttr) yieldAttr.setValue(yieldValue);
 
-    console.log("Financial Metrics Updated -> Discount: " + discount + "%, New Rate: " + rate +
-                ", Base: " + baseTotal + ", Incremental: " + incrementalRevenue + ", Total: " + total);
-};
-
-// ============================================================================
-//  INCREMENTAL GAMES
-// ============================================================================
-
-/**
- * Derives Incremental Revenue for this line from the per-game rates:
- *
- *   (Rate per Home Game x Deal.Incremental Home Games)
- * + (Rate per Away Game x Deal.Incremental Away Games)
- *
- * The seller types what the contract says ("$600 per home game") and the amount
- * is calculated, so the figure can always be traced back to the contract.
- *
- * When neither rate is filled in, the field is left alone: the line is then on
- * the itemized path (typed by hand) or on the flat-fee path (filled by the
- * distribution button in the Deal Line Builder).
- *
- * Wire to the OnChange of new_incrementalrateperhomegame and new_incrementalrateperawaygame.
- * @param {object} executionContext
- */
-DealLineForm.calculateIncrementalRevenue = function (executionContext) {
-    var formContext = executionContext.getFormContext();
-
-    var homeRateAttr = formContext.getAttribute("new_incrementalrateperhomegame");
-    var awayRateAttr = formContext.getAttribute("new_incrementalrateperawaygame");
-    var incrementalAttr = formContext.getAttribute("new_incrementalrevenue");
-    var dealAttr = formContext.getAttribute("new_dealid");
-
-    if (!incrementalAttr || !dealAttr) return;
-
-    var homeRate = homeRateAttr ? (homeRateAttr.getValue() || 0) : 0;
-    var awayRate = awayRateAttr ? (awayRateAttr.getValue() || 0) : 0;
-
-    // No per-game rates on this line: it is handled manually or by the distribution button.
-    if (homeRate === 0 && awayRate === 0) return;
-
-    var dealValue = dealAttr.getValue();
-    if (!dealValue || dealValue.length === 0) return;
-
-    var dealId = dealValue[0].id.replace("{", "").replace("}", "");
-
-    Xrm.WebApi.retrieveRecord(
-        "new_deals",
-        dealId,
-        "?$select=new_incrementalhomegames,new_incrementalawaygames"
-    ).then(
-        function success(result) {
-            var homeGames = result.new_incrementalhomegames || 0;
-            var awayGames = result.new_incrementalawaygames || 0;
-
-            var amount = (homeRate * homeGames) + (awayRate * awayGames);
-            amount = Math.round(amount * 100) / 100;
-
-            incrementalAttr.setValue(amount);
-            DealLineForm.calculateFinancialMetrics(executionContext);
-
-            console.log("Incremental Revenue -> home " + homeRate + " x " + homeGames +
-                        " + away " + awayRate + " x " + awayGames + " = " + amount);
-        },
-        function error(err) {
-            console.error("DealLineForm.calculateIncrementalRevenue: " + err.message);
-        }
-    );
-};
-
-/**
- * Defaults Delivered Quantity and Include in Auto-Proration when an Inventory
- * item is selected.
- *
- *   Delivered Quantity     -> the season's home games, but only for assets flagged
- *                             as game-based. Everything else keeps Quantity.
- *   Include in Auto-Proration -> the default carried on the Inventory record, so
- *                             tickets, suites and hospitality arrive set to No.
- *
- * Called from onInventoryChange.
- * @param {object} formContext
- * @param {object} inventoryResult  Result of the Inventory retrieve
- */
-DealLineForm.applyIncrementalDefaultsFromInventory = function (formContext, inventoryResult) {
-    var prorationAttr = formContext.getAttribute("new_includeinautoproration");
-    if (prorationAttr && inventoryResult.new_defaultautoproration !== null &&
-        inventoryResult.new_defaultautoproration !== undefined) {
-        prorationAttr.setValue(inventoryResult.new_defaultautoproration);
-    }
-
-    if (inventoryResult.new_gamebasedasset !== true) return;
-
-    var deliveredAttr = formContext.getAttribute("new_deliveredquantity");
-    var seasonAttr = formContext.getAttribute("new_seasonid");
-    if (!deliveredAttr || !seasonAttr) return;
-
-    var seasonValue = seasonAttr.getValue();
-    if (!seasonValue || seasonValue.length === 0) return;
-
-    var seasonId = seasonValue[0].id.replace("{", "").replace("}", "");
-
-    Xrm.WebApi.retrieveRecord("new_season", seasonId, "?$select=new_homegames").then(
-        function success(season) {
-            var homeGames = season.new_homegames;
-            if (homeGames === null || homeGames === undefined) return;
-            deliveredAttr.setValue(homeGames);
-            console.log("Delivered Quantity defaulted from season home games: " + homeGames);
-        },
-        function error(err) {
-            console.error("DealLineForm.applyIncrementalDefaultsFromInventory: " + err.message);
-        }
-    );
+    console.log("Financial Metrics Updated -> Discount: " + discount + "%, New Rate: " + rate + ", Total: " + total);
 };

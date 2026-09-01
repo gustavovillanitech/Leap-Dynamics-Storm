@@ -49,12 +49,10 @@ namespace Pl.DealLines.InventoryManagement
 					// 1. PRE-OPERATION: Calculate Inline Math
 					if (stage == 20 && (messageName == "create" || messageName == "update"))
 					{
-						CalculateDealLineMetrics(target, preImage, service, tracingService);
-						// Mirror the descriptions from the selected Inventory onto the Deal Line and,
-						// on create, apply the Inventory-driven defaults (Delivered Quantity and
-						// Include in Auto-Proration).
+						CalculateDealLineMetrics(target, preImage, tracingService);
+						// Mirror the descriptions from the selected Inventory onto the Deal Line.
 						// Covers lines created outside the form (Deal Line Builder canvas app, multi-year clone).
-						ApplyInventoryDefaultsToLine(target, preImage, messageName, service, tracingService);
+						MirrorInventoryDescriptionsToLine(target, service, tracingService);
 					}
 
 					// 2. POST-OPERATION: Rollup to Deal & Update Inventory Deltas
@@ -91,7 +89,7 @@ namespace Pl.DealLines.InventoryManagement
 
 		#region 1. Deal Line Math (Pre-Operation)
 
-		private void CalculateDealLineMetrics(Entity target, Entity preImage, IOrganizationService service, ITracingService tracingService)
+		private void CalculateDealLineMetrics(Entity target, Entity preImage, ITracingService tracingService)
 		{
 			tracingService.Trace("Calculating Deal Line Financial Metrics...");
 
@@ -103,39 +101,7 @@ namespace Pl.DealLines.InventoryManagement
 			// (Used for rounded amounts, e.g. a deal meant to total exactly $50,000 that qty x rate
 			//  cannot produce with a 2-decimal rate.) Null override => normal Quantity x Rate.
 			decimal? overrideTotal = GetMoneyNullable(target, preImage, "new_linetotaloverride");
-			decimal baseTotal = overrideTotal.HasValue ? overrideTotal.Value : quantity * rateCharged;
-
-			// Incremental Revenue: revenue attributed to the additional games of the season.
-			// It is added on top of the base, never instead of it.
-			//
-			// Calculated here rather than on the form, because the line is edited inline in the
-			// Deal Lines subgrid as often as it is opened, and an editable grid never runs form
-			// scripts. Anything the grid can change has to be maintained server-side.
-			//
-			// IMPORTANT: new_deliveredquantity is deliberately NOT used in any calculation here.
-			// new_quantity is what the contracted price covers and drives the money; delivered
-			// quantity is what the partner receives and only feeds activation and inventory
-			// availability. Using delivered quantity in this formula would charge the additional
-			// games twice: once through the quantity and again through the incremental revenue.
-			// Precedence, in this order:
-			//  1. A rate was touched -> recalculate from the rates. The plugin wins over anything the
-			//     form script may have put in the field, so the rate stays the single source of truth.
-			//  2. Otherwise an amount was supplied -> take it as given. This is how the distribution
-			//     Custom API (and a Flat Amount / Itemized by Line deal) states the figure outright.
-			//  3. Otherwise -> leave whatever the line already had, so a partial update that touches
-			//     neither does not wipe it.
-			decimal incrementalRevenue;
-			if (target.Contains("new_incrementalrateperhomegame") || target.Contains("new_incrementalrateperawaygame"))
-			{
-				incrementalRevenue = CalculateIncrementalRevenue(target, preImage, service, tracingService);
-				target["new_incrementalrevenue"] = new Money(incrementalRevenue);
-			}
-			else
-			{
-				incrementalRevenue = GetMoneyValue(target, preImage, "new_incrementalrevenue");
-			}
-
-			decimal total = baseTotal + incrementalRevenue;
+			decimal total = overrideTotal.HasValue ? overrideTotal.Value : quantity * rateCharged;
 			decimal listRate = quantity * rateCard;
 			decimal gainLoss = total - listRate;
 
@@ -150,177 +116,30 @@ namespace Pl.DealLines.InventoryManagement
 			target["new_gainloss"] = new Money(gainLoss);
 			target["new_yield"] = yieldValue;
 
-			tracingService.Trace($"Metrics Calculated -> Base: {baseTotal}, Incremental: {incrementalRevenue}, Total: {total}, Yield: {yieldValue}");
+			tracingService.Trace($"Metrics Calculated -> Total: {total}, Yield: {yieldValue}");
 		}
 
 		/// <summary>
-		/// Incremental Revenue for one deal line:
-		///
-		///   (Incremental Rate per Home Game x Deal.Incremental Home Games)
-		/// + (Incremental Rate per Away Game x Deal.Incremental Away Games)
-		///
-		/// The game counts live on the parent Deal as formula columns, so they are read back from
-		/// the Deal rather than stored on the line: the line always reflects the season the deal
-		/// belongs to, and correcting Contracted Home Games on the Deal never leaves the lines
-		/// disagreeing with it.
-		///
-		/// Returns 0 when neither rate is set, so the extra Retrieve only happens on the lines that
-		/// actually carry an incremental charge. Also returns 0 when the Deal has no incremental
-		/// clause, which keeps a stray rate on a line from inventing revenue.
+		/// Copies the external/internal descriptions from the selected Inventory onto the Deal Line
+		/// (external -> new_description, internal -> new_internaldescription). Only runs when the
+		/// Inventory lookup is present on the Target (set on create, changed on update, or set by the
+		/// Deal Line Builder / multi-year clone) to avoid an unnecessary Retrieve on unrelated edits.
 		/// </summary>
-		private decimal CalculateIncrementalRevenue(Entity target, Entity preImage, IOrganizationService service, ITracingService tracing)
-		{
-			const int CLAUSE_IN = 100000000;
-			const int CLAUSE_OPT_IN = 100000001;
-
-			decimal homeRate = GetMoneyValue(target, preImage, "new_incrementalrateperhomegame");
-			decimal awayRate = GetMoneyValue(target, preImage, "new_incrementalrateperawaygame");
-
-			if (homeRate == 0m && awayRate == 0m)
-				return 0m;
-
-			Guid dealId = GetLookupId(target, preImage, "new_dealid");
-			if (dealId == Guid.Empty)
-			{
-				tracing.Trace("CalculateIncrementalRevenue: no deal on the line, returning 0.");
-				return 0m;
-			}
-
-			try
-			{
-				Entity deal = service.Retrieve("new_deals", dealId, new ColumnSet(
-					"new_incrementalgamesclause",
-					"new_awaygamebenefits",
-					"new_incrementalhomegames",
-					"new_incrementalawaygames"));
-
-				OptionSetValue clause = deal.GetAttributeValue<OptionSetValue>("new_incrementalgamesclause");
-				bool hasClause = clause != null && (clause.Value == CLAUSE_IN || clause.Value == CLAUSE_OPT_IN);
-				if (!hasClause)
-				{
-					tracing.Trace("CalculateIncrementalRevenue: deal has no incremental clause, returning 0.");
-					return 0m;
-				}
-
-				// Read through GetNumericValue, not GetAttributeValue<int>. Incremental Home/Away
-				// Games are FORMULA COLUMNS, and Dataverse stores a numeric Power Fx formula as a
-				// Decimal even when the values are whole games. GetAttributeValue<int> does not
-				// convert: on a decimal attribute it silently returns 0, which multiplied by the
-				// per-game rate gives an incremental revenue of exactly zero and no error anywhere.
-				decimal homeGames = GetNumericValue(deal, "new_incrementalhomegames");
-				decimal awayGames = deal.GetAttributeValue<bool>("new_awaygamebenefits")
-					? GetNumericValue(deal, "new_incrementalawaygames")
-					: 0m;
-
-				decimal revenue = (homeRate * homeGames) + (awayRate * awayGames);
-
-				tracing.Trace($"Incremental Revenue -> home {homeRate} x {homeGames} + away {awayRate} x {awayGames} = {revenue}");
-				return revenue;
-			}
-			catch (Exception ex)
-			{
-				tracing.Trace($"CalculateIncrementalRevenue failed, returning 0: {ex.Message}");
-				return 0m;
-			}
-		}
-
-		/// <summary>
-		/// Applies everything the selected Inventory drives on a Deal Line:
-		///  - always: mirrors the external/internal descriptions
-		///    (external -> new_description, internal -> new_internaldescription)
-		///  - on create only: defaults Include in Auto-Proration from the Inventory's
-		///    Default Auto-Proration, and Delivered Quantity from the season's home games
-		///    when the Inventory is a game-based asset (otherwise from the quantity).
-		/// Only runs when the Inventory lookup is present on the Target (set on create, changed on
-		/// update, or set by the Deal Line Builder / multi-year clone) to avoid an unnecessary
-		/// Retrieve on unrelated edits.
-		/// </summary>
-		private void ApplyInventoryDefaultsToLine(Entity target, Entity preImage, string messageName,
-			IOrganizationService service, ITracingService tracing)
+		private void MirrorInventoryDescriptionsToLine(Entity target, IOrganizationService service, ITracingService tracing)
 		{
 			if (!(target.Contains("new_inventory") && target["new_inventory"] is EntityReference invRef))
 				return;
 
 			try
 			{
-				Entity inv = service.Retrieve("new_inventory", invRef.Id, new ColumnSet(
-					"new_description",
-					"new_internaldescription",
-					"new_gamebasedasset",
-					"new_defaultautoproration"));
-
+				Entity inv = service.Retrieve("new_inventory", invRef.Id, new ColumnSet("new_description", "new_internaldescription"));
 				target["new_description"] = inv.GetAttributeValue<string>("new_description");
 				target["new_internaldescription"] = inv.GetAttributeValue<string>("new_internaldescription");
 				tracing.Trace("Descriptions mirrored from inventory onto the deal line.");
-
-				// The two defaults below run on create only. On update the user (or the clone) has
-				// already decided, and overwriting would fight them.
-				//
-				// They live here rather than in the form script because most deal lines are never
-				// created on the form: the Deal Line Builder canvas app and CloneMultiYearDeals both
-				// write straight to the table, and a form OnChange never fires for them.
-				if (messageName != "create")
-					return;
-
-				if (!target.Contains("new_includeinautoproration"))
-				{
-					bool defaultProration = inv.GetAttributeValue<bool>("new_defaultautoproration");
-					target["new_includeinautoproration"] = defaultProration;
-					tracing.Trace($"Include in Auto-Proration defaulted from inventory: {defaultProration}");
-				}
-
-				if (!target.Contains("new_deliveredquantity"))
-				{
-					bool gameBased = inv.GetAttributeValue<bool>("new_gamebasedasset");
-
-					if (gameBased)
-					{
-						// A game-based asset is delivered once per home game of the season, whatever
-						// the contract says the quantity is. That gap between delivered and contracted
-						// is the whole point of the incremental games design.
-						Guid dealId = GetLookupId(target, preImage, "new_dealid");
-						int seasonHomeGames = GetSeasonHomeGames(dealId, service, tracing);
-						if (seasonHomeGames > 0)
-						{
-							target["new_deliveredquantity"] = seasonHomeGames;
-							tracing.Trace($"Delivered Quantity defaulted from season home games: {seasonHomeGames}");
-						}
-					}
-					else
-					{
-						decimal quantity = GetDecimalValue(target, preImage, "new_quantity");
-						target["new_deliveredquantity"] = (int)quantity;
-						tracing.Trace($"Delivered Quantity defaulted from quantity: {(int)quantity}");
-					}
-				}
 			}
 			catch (Exception ex)
 			{
-				tracing.Trace($"ApplyInventoryDefaultsToLine skipped: {ex.Message}");
-			}
-		}
-
-		/// <summary>
-		/// Home games of the season the deal belongs to. Returns 0 when the deal has no season,
-		/// which leaves Delivered Quantity untouched rather than writing a misleading zero.
-		/// </summary>
-		private int GetSeasonHomeGames(Guid dealId, IOrganizationService service, ITracingService tracing)
-		{
-			if (dealId == Guid.Empty) return 0;
-
-			try
-			{
-				Entity deal = service.Retrieve("new_deals", dealId, new ColumnSet("new_season"));
-				EntityReference seasonRef = deal.GetAttributeValue<EntityReference>("new_season");
-				if (seasonRef == null) return 0;
-
-				Entity season = service.Retrieve("new_season", seasonRef.Id, new ColumnSet("new_homegames"));
-				return (int)GetNumericValue(season, "new_homegames");
-			}
-			catch (Exception ex)
-			{
-				tracing.Trace($"GetSeasonHomeGames skipped: {ex.Message}");
-				return 0;
+				tracing.Trace($"MirrorInventoryDescriptionsToLine skipped: {ex.Message}");
 			}
 		}
 
@@ -336,7 +155,6 @@ namespace Pl.DealLines.InventoryManagement
                         <fetch aggregate='true'>
                             <entity name='new_deallines'>
                             <attribute name='new_total' alias='sum_total' aggregate='sum' />
-                            <attribute name='new_incrementalrevenue' alias='sum_incremental' aggregate='sum' />
                             <filter>
                                 <condition attribute='new_dealid' operator='eq' value='{dealId}' />
                             </filter>
@@ -345,70 +163,26 @@ namespace Pl.DealLines.InventoryManagement
 
 			EntityCollection result = service.RetrieveMultiple(new FetchExpression(fetchXml));
 			decimal netTotal = 0m;
-			decimal incrementalAllocated = 0m;
 
-			if (result.Entities.Count > 0)
+			if (result.Entities.Count > 0 && result.Entities[0].Contains("sum_total"))
 			{
-				netTotal = GetAggregatedMoney(result.Entities[0], "sum_total");
-				incrementalAllocated = GetAggregatedMoney(result.Entities[0], "sum_incremental");
+				AliasedValue aliasedTotal = (AliasedValue)result.Entities[0]["sum_total"];
+
+				if (aliasedTotal != null && aliasedTotal.Value != null)
+				{
+					netTotal = ((Money)aliasedTotal.Value).Value;
+				}
 			}
 
 			// Pass dealId so calc can read the frozen percent from the Deal first
 			decimal maxActivationSpend = CalculateMaxActivationSpend(dealId, netTotal, service, tracingService);
 
-			// Incremental game revenue is maintained here, synchronously, rather than through a
-			// Dataverse rollup field. Rollups recalculate on a schedule (hourly by default), which
-			// would leave the figure stale exactly while a seller is entering amounts line by line.
-			// This also keeps it consistent with new_total, which is already maintained this way.
-			decimal contractValue = GetDealIncrementalContractValue(dealId, service, tracingService);
-			decimal variance = contractValue - incrementalAllocated;
-
 			Entity dealToUpdate = new Entity("new_deals", dealId);
 			dealToUpdate["new_total"] = new Money(netTotal);
 			dealToUpdate["new_maxactivationspend"] = new Money(maxActivationSpend);
-			dealToUpdate["new_totalincrementalrevenue"] = new Money(incrementalAllocated);
-			dealToUpdate["new_unallocatedvariance"] = new Money(variance);
 			service.Update(dealToUpdate);
 
-			tracingService.Trace($"Deal {dealId} updated -> Total: {netTotal}, MaxActivationSpend: {maxActivationSpend}, " +
-								 $"IncrementalAllocated: {incrementalAllocated}, Variance: {variance}");
-		}
-
-		/// <summary>
-		/// Reads a summed Money value out of a FetchXML aggregate result.
-		/// Returns 0 when the alias is missing or the aggregate produced no rows.
-		/// </summary>
-		private decimal GetAggregatedMoney(Entity aggregateRow, string alias)
-		{
-			if (!aggregateRow.Contains(alias))
-				return 0m;
-
-			AliasedValue aliased = aggregateRow[alias] as AliasedValue;
-			if (aliased == null || aliased.Value == null)
-				return 0m;
-
-			Money money = aliased.Value as Money;
-			return money != null ? money.Value : 0m;
-		}
-
-		/// <summary>
-		/// Reads Incremental Contract Value from the parent Deal so the unallocated
-		/// variance can be written in the same pass as the allocated total.
-		/// Returns 0 when the Deal cannot be read or the field is empty.
-		/// </summary>
-		private decimal GetDealIncrementalContractValue(Guid dealId, IOrganizationService service, ITracingService tracing)
-		{
-			try
-			{
-				Entity deal = service.Retrieve("new_deals", dealId, new ColumnSet("new_incrementalcontractvalue"));
-				Money contractValue = deal.GetAttributeValue<Money>("new_incrementalcontractvalue");
-				return contractValue != null ? contractValue.Value : 0m;
-			}
-			catch (Exception ex)
-			{
-				tracing.Trace($"GetDealIncrementalContractValue skipped: {ex.Message}");
-				return 0m;
-			}
+			tracingService.Trace($"Deal {dealId} updated -> Total: {netTotal}, MaxActivationSpend: {maxActivationSpend}");
 		}
 
 		/// <summary>
@@ -656,31 +430,6 @@ namespace Pl.DealLines.InventoryManagement
 			if (preImage.Contains(attributeName))
 				return preImage.GetAttributeValue<Money>(attributeName)?.Value;
 			return null;
-		}
-
-		/// <summary>
-		/// Reads a numeric attribute whatever CLR type Dataverse happens to store it as.
-		///
-		/// This exists because of formula columns. A Power Fx formula that returns a number is
-		/// stored as a Decimal even when every value it produces is a whole number, so
-		/// GetAttributeValue&lt;int&gt; on one returns 0 rather than the value or an exception —
-		/// a silent zero that propagates into whatever it multiplies. Anything read from a formula
-		/// column has to come through here.
-		/// </summary>
-		private static decimal GetNumericValue(Entity entity, string attributeName)
-		{
-			if (entity == null || !entity.Contains(attributeName) || entity[attributeName] == null)
-				return 0m;
-
-			object value = entity[attributeName];
-
-			if (value is int) return (int)value;
-			if (value is decimal) return (decimal)value;
-			if (value is double) return (decimal)(double)value;
-			if (value is long) return (long)value;
-			if (value is Money) return ((Money)value).Value;
-
-			return 0m;
 		}
 
 		private Guid GetLookupId(Entity target, Entity preImage, string attributeName)

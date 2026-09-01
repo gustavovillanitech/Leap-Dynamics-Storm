@@ -90,13 +90,7 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 				{
 					ColumnSet = new ColumnSet(
 					"new_name", "new_accountid", "new_dealstatus", "new_dealtype",
-					"new_partnershipassigneeemail", "new_salesperson", "new_serviceperson", "new_season",
-					// Incremental games clause: negotiated once, inherited by every year of the contract.
-					// These MUST be listed here or dealFieldsToCopy silently copies nothing.
-					"new_incrementalgamesclause", "new_awaygamebenefits",
-					"new_contractedhomegames", "new_contractedawaygames",
-					"new_investmentperhomegame", "new_investmentperawaygame",
-					"new_incrementalpricingmethod", "new_incrementalgamesnotes"
+					"new_partnershipassigneeemail", "new_salesperson", "new_serviceperson", "new_season"
 				)
 				};
 				dealQuery.Criteria.AddCondition("new_opportunity", ConditionOperator.Equal, opp.Id);
@@ -140,12 +134,7 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 				{
 					ColumnSet = new ColumnSet(
 					"new_name", "new_inventory", "new_quantity", "new_discount", "new_rate", "new_notes",
-					"new_seasonid", "new_ratecard",
-					// new_linetotaloverride was missing here as well as from lineFieldsToCopy: a line
-					// priced through the override was cloned at quantity x escalated rate instead.
-					"new_linetotaloverride",
-					"new_includeinautoproration",
-					"new_incrementalrateperhomegame", "new_incrementalrateperawaygame"
+					"new_seasonid", "new_ratecard"
 				)
 				};
 				lineQuery.Criteria.AddCondition("new_dealid", ConditionOperator.Equal, baseDeal.Id);
@@ -195,11 +184,6 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 
 					Guid newOppId = service.Create(newOpp);
 
-					// Game counts of the target season, used to work out the incremental games
-					// the cloned deal is entitled to.
-					int targetSeasonHomeGames, targetSeasonAwayGames;
-					GetSeasonGames(targetSeason.Id, service, tracingService, out targetSeasonHomeGames, out targetSeasonAwayGames);
-
 					// C. Clone Deal
 					Entity newDeal = new Entity("new_deals");
 					if (baseDeal.Contains("new_name"))
@@ -211,32 +195,14 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 					newDeal["new_totalcontractyears"] = totalYears;
 					newDeal["new_opportunity"] = new EntityReference("opportunity", newOppId);
 
-					// Copy Deal Status, Type, and personnel.
-					// The incremental games clause travels with the contract, so it is carried
-					// forward too: it is entered once and inherited by every year of the deal.
-					// Only the clause terms are copied — the amounts are NOT, because each season
-					// has its own game counts and its own incremental revenue.
+					// Copy Deal Status, Type, and personnel
 					string[] dealFieldsToCopy = { "new_accountid", "new_dealtype",
 							  "new_partnershipassigneeemail", "new_salesperson",
-							  "new_serviceperson",
-							  "new_incrementalgamesclause", "new_awaygamebenefits",
-							  "new_contractedhomegames", "new_contractedawaygames",
-							  "new_investmentperhomegame", "new_investmentperawaygame",
-							  "new_incrementalpricingmethod", "new_incrementalgamesnotes" };
+							  "new_serviceperson" }; 
 					foreach (string df in dealFieldsToCopy)
 					{
 						if (baseDeal.Contains(df)) newDeal[df] = baseDeal[df];
 					}
-
-					// Incremental Contract Value is calculated, never copied. The rates travel with the
-					// contract but the game counts belong to the target season, so the amount has to be
-					// worked out here. Without this the cloned deal arrives with a clause, rates and
-					// game counts but a blank contract value, which leaves Unallocated Variance at zero
-					// and hides the fact that there is anything left to allocate.
-					//
-					// It is calculated rather than left to the form script because a clone never opens
-					// a form. The field stays editable afterwards.
-					SetIncrementalContractValue(newDeal, baseDeal, targetSeasonHomeGames, targetSeasonAwayGames, tracingService);
 
 					Guid? openStatusId = GetDealStatusIdByCode("DS-1001", service, tracingService);
 					if (openStatusId.HasValue)
@@ -263,22 +229,7 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 						if (line.Contains("new_name"))
 							newLine["new_name"] = line.GetAttributeValue<string>("new_name").Replace(startYear.ToString(), targetYear.ToString());
 
-						// new_linetotaloverride MUST be copied. When a line is priced through the
-						// override, leaving it behind silently drops the clone to Quantity x escalated
-						// Rate, which is lower than what was contracted.
-						//
-						// new_incrementalrateperhomegame / new_incrementalrateperawaygame are the contract's
-						// per-game rates, so they belong to the contract and travel forward.
-						//
-						// Deliberately NOT copied:
-						//   new_incrementalrevenue  -> belongs to the season it was earned in. The next
-						//                              year starts at zero until that season's game counts
-						//                              are known and the amounts are entered or distributed.
-						//   new_deliveredquantity   -> reset below to the target season's home games.
-						string[] lineFieldsToCopy = { "new_inventory", "new_quantity", "new_discount", "new_notes",
-													  "new_ratecard", "new_linetotaloverride",
-													  "new_includeinautoproration",
-													  "new_incrementalrateperhomegame", "new_incrementalrateperawaygame" };
+						string[] lineFieldsToCopy = { "new_inventory", "new_quantity", "new_discount", "new_notes", "new_ratecard" };
 						foreach (string lf in lineFieldsToCopy)
 						{
 							if (line.Contains(lf)) newLine[lf] = line[lf];
@@ -288,12 +239,6 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 						{
 							newLine["new_seasonid"] = targetSeason.ToEntityReference();
 						}
-
-						// Delivered Quantity is deliberately left unset. The pre-operation handler in
-						// Pl.DealLines.InventoryManagement fills it on create with the rule that applies
-						// everywhere: the season's home games when the Inventory is a game-based asset,
-						// the quantity otherwise. Setting it here would bypass that check and hand a
-						// season's worth of games to assets that are not delivered per game.
 
 						// Escalate the input Rate (Rate Charged)
 						if (line.Contains("new_rate"))
@@ -322,75 +267,6 @@ namespace Pl.Opportunity.CloneMultiYearDeals
 				}
 				throw new InvalidPluginExecutionException($"Error generating future deals: {ex.Message}");
 			}
-		}
-
-		/// <summary>
-		/// Reads Home Games and Away Games from a Season record. Missing values come back as 0,
-		/// which makes the incremental game count zero rather than negative.
-		/// </summary>
-		private void GetSeasonGames(Guid seasonId, IOrganizationService service, ITracingService tracing,
-			out int homeGames, out int awayGames)
-		{
-			homeGames = 0;
-			awayGames = 0;
-
-			try
-			{
-				Entity season = service.Retrieve("new_season", seasonId, new ColumnSet("new_homegames", "new_awaygames"));
-				homeGames = season.GetAttributeValue<int>("new_homegames");
-				awayGames = season.GetAttributeValue<int>("new_awaygames");
-			}
-			catch (Exception ex)
-			{
-				tracing.Trace($"GetSeasonGames skipped: {ex.Message}");
-			}
-		}
-
-		/// <summary>
-		/// Sets Incremental Contract Value on the cloned deal:
-		///
-		///   (Investment per Home Game x Max(0, season home games - contracted home games))
-		/// + (Investment per Away Game x Max(0, season away games - contracted away games))
-		///
-		/// Only when the clause is In or Opt-In and the pricing method is Per Game Rate. Any other
-		/// combination means the amount comes from the contract rather than from a rate, and is left
-		/// blank for someone to enter.
-		/// </summary>
-		private void SetIncrementalContractValue(Entity newDeal, Entity baseDeal,
-			int seasonHomeGames, int seasonAwayGames, ITracingService tracing)
-		{
-			const int CLAUSE_IN = 100000000;
-			const int CLAUSE_OPT_IN = 100000001;
-			const int METHOD_PER_GAME_RATE = 100000000;
-
-			OptionSetValue clause = baseDeal.GetAttributeValue<OptionSetValue>("new_incrementalgamesclause");
-			if (clause == null || (clause.Value != CLAUSE_IN && clause.Value != CLAUSE_OPT_IN))
-				return;
-
-			OptionSetValue method = baseDeal.GetAttributeValue<OptionSetValue>("new_incrementalpricingmethod");
-			if (method == null || method.Value != METHOD_PER_GAME_RATE)
-			{
-				tracing.Trace("Incremental Contract Value left blank: pricing method is not Per Game Rate.");
-				return;
-			}
-
-			int contractedHome = baseDeal.GetAttributeValue<int>("new_contractedhomegames");
-			int contractedAway = baseDeal.GetAttributeValue<int>("new_contractedawaygames");
-			bool awayBenefits = baseDeal.GetAttributeValue<bool>("new_awaygamebenefits");
-
-			int incrementalHome = seasonHomeGames > contractedHome ? seasonHomeGames - contractedHome : 0;
-			int incrementalAway = awayBenefits && seasonAwayGames > contractedAway ? seasonAwayGames - contractedAway : 0;
-
-			Money homeRateMoney = baseDeal.GetAttributeValue<Money>("new_investmentperhomegame");
-			Money awayRateMoney = baseDeal.GetAttributeValue<Money>("new_investmentperawaygame");
-			decimal homeRate = homeRateMoney != null ? homeRateMoney.Value : 0m;
-			decimal awayRate = awayRateMoney != null ? awayRateMoney.Value : 0m;
-
-			decimal contractValue = (homeRate * incrementalHome) + (awayRate * incrementalAway);
-			newDeal["new_incrementalcontractvalue"] = new Money(contractValue);
-
-			tracing.Trace($"Incremental Contract Value -> home {homeRate} x {incrementalHome} + " +
-						  $"away {awayRate} x {incrementalAway} = {contractValue}");
 		}
 
 		private Guid? GetDealStatusIdByCode(string code, IOrganizationService service, ITracingService tracing)
