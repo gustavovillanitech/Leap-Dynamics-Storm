@@ -361,7 +361,13 @@ namespace Pl.DealLines.InventoryManagement
 			// would leave the figure stale exactly while a seller is entering amounts line by line.
 			// This also keeps it consistent with new_total, which is already maintained this way.
 			decimal contractValue = GetDealIncrementalContractValue(dealId, service, tracingService);
-			decimal variance = contractValue - incrementalAllocated;
+
+			// With no contract value there is nothing to reconcile against, so the variance is zero
+			// rather than the negative of whatever the lines carry. That is the Itemized by Line case:
+			// the amount is whatever the lines add up to, and there is no separate agreed total.
+			// A contract value that IS set and is smaller than the lines still reports negative, which
+			// is the signal that the deal is over-allocated.
+			decimal variance = contractValue == 0m ? 0m : contractValue - incrementalAllocated;
 
 			Entity dealToUpdate = new Entity("new_deals", dealId);
 			dealToUpdate["new_total"] = new Money(netTotal);

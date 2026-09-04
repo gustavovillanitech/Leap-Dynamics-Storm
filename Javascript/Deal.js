@@ -207,12 +207,21 @@ DealForm.setPlayoffOptionRequirements = function (executionContext) {
     if (!statusAttr) return;
     var status = statusAttr.getValue();
 
+    var IN = 100000002;
     var OUT = 100000003;
     var UNKNOWN = 100000004;
 
-    var needsRequired = (status !== null && status !== OUT && status !== UNKNOWN);
+    // A deadline and a decision only make sense when there is an option still to be exercised,
+    // which is Opt-In and Opt-Out. In and Out are already settled by the contract: the playoff
+    // package is either included or it is not, so there is no date to decide by and no decision
+    // to record. Unknown has nothing to go on yet.
+    //
+    // This mirrors the Deal Option rule, where No Option and Unknown are exempt for the same
+    // reason. Keeping the two sections asymmetric was blocking deals from being moved to
+    // Closed Won over a date that does not exist in the contract.
+    var isSettledOrUnknown = (status === null || status === IN || status === OUT || status === UNKNOWN);
 
-    if (needsRequired) {
+    if (!isSettledOrUnknown) {
         setReq("new_playoffoptiondeadline", "required");
         setReq("new_playoffoptiondecision", "required");
     }
@@ -449,10 +458,17 @@ DealForm.IncrementalGames = {
     // Money: hidden when the contract carries no incremental charge
     MONEY_FIELDS: [
         "new_incrementalpricingmethod",
-        "new_investmentperhomegame",
         "new_incrementalcontractvalue",
         "new_totalincrementalrevenue",
         "new_unallocatedvariance"
+    ],
+
+    // The per-game investment only means something under Per Game Rate. Under Flat Amount the
+    // figure is negotiated outright, and under Itemized by Line it lives on each deal line. Left
+    // visible in those methods, the rates invite the reader to do the arithmetic and reconcile it
+    // against a contract value that was never derived from them.
+    PER_GAME_RATE_FIELDS: [
+        "new_investmentperhomegame"
     ],
 
     AWAY_MONEY_FIELDS: [
@@ -507,12 +523,18 @@ DealForm.applyIncrementalGamesRules = function (executionContext) {
     var awayAttr = formContext.getAttribute("new_awaygamebenefits");
     var hasAwayBenefits = (awayAttr && awayAttr.getValue() === true);
 
+    // How the incremental amount is arrived at decides which money fields are meaningful.
+    var methodAttr = formContext.getAttribute("new_incrementalpricingmethod");
+    var method = methodAttr ? methodAttr.getValue() : null;
+    var isPerGameRate = (method === cfg.METHOD_PER_GAME_RATE);
+
     // --- Visibility ---
     setVisible("new_awaygamebenefits", receivesGames);
     setList(cfg.GAMES_FIELDS, receivesGames);
     setList(cfg.AWAY_GAMES_FIELDS, receivesGames && hasAwayBenefits);
     setList(cfg.MONEY_FIELDS, hasClause);
-    setList(cfg.AWAY_MONEY_FIELDS, hasClause && hasAwayBenefits);
+    setList(cfg.PER_GAME_RATE_FIELDS, hasClause && isPerGameRate);
+    setList(cfg.AWAY_MONEY_FIELDS, hasClause && hasAwayBenefits && isPerGameRate);
 
     // Notes only matter once the deal actually has a clause. Left visible on a
     // deal with no clause, the empty multiline box stretches the section to full
@@ -522,7 +544,7 @@ DealForm.applyIncrementalGamesRules = function (executionContext) {
 
     // --- Requirement levels ---
     // Reset everything first so a change of clause never leaves a stale requirement.
-    cfg.GAMES_FIELDS.concat(cfg.AWAY_GAMES_FIELDS, cfg.MONEY_FIELDS, cfg.AWAY_MONEY_FIELDS)
+    cfg.GAMES_FIELDS.concat(cfg.AWAY_GAMES_FIELDS, cfg.MONEY_FIELDS, cfg.PER_GAME_RATE_FIELDS, cfg.AWAY_MONEY_FIELDS)
         .forEach(function (f) { setReq(f, "none"); });
 
     if (receivesGames) {
@@ -530,14 +552,9 @@ DealForm.applyIncrementalGamesRules = function (executionContext) {
         if (hasAwayBenefits) setReq("new_contractedawaygames", "required");
     }
 
-    if (hasClause) {
-        var methodAttr = formContext.getAttribute("new_incrementalpricingmethod");
-        var method = methodAttr ? methodAttr.getValue() : null;
-
-        if (method === cfg.METHOD_PER_GAME_RATE) {
-            setReq("new_investmentperhomegame", "required");
-            if (hasAwayBenefits) setReq("new_investmentperawaygame", "required");
-        }
+    if (hasClause && isPerGameRate) {
+        setReq("new_investmentperhomegame", "required");
+        if (hasAwayBenefits) setReq("new_investmentperawaygame", "required");
     }
 
     // When there is no clause the contract value must read zero, not a leftover.
