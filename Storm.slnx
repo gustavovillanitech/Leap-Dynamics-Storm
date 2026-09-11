@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Consoles/">
+    <Project Path="Consoles/ApplyInventoryUpdates/ApplyInventoryUpdates.csproj" Id="a369d56e-dd42-42ed-a4a2-7a7d3da58fc8" />
     <Project Path="Consoles/BackFillOppProdType/BackFillOppProdType.csproj" Id="98a6dc23-a1b4-4a7d-a054-a629719446e6" />
     <Project Path="Consoles/CleanupDuplicateOpps/CleanupDuplicateOpps.csproj" Id="37e1087e-06a0-49e3-85f1-0544dfe8e0e8" />
     <Project Path="Consoles/CreateMassiveAccountsContactsOpp/CreateMassiveAccountsContactsOpp.csproj" Id="98973db5-79a2-45f3-8927-8f3457b51bc5" />
