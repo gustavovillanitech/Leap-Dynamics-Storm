@@ -18,6 +18,10 @@ namespace Pl.Deal.OptionAutomation
 		private const int DECISION_MUTUAL_OPTED_OUT = 100000002;
 		private const int DECISION_MUTUAL_OPTED_IN = 100000003;
 		private const int DECISION_STORM_OPTED_OUT = 100000004;
+		// Added 2026-09-14 (Christine's request). When the option deadline is years out there is
+		// no decision to record yet, but the field is required, so the deal cannot be saved as
+		// Closed Won. This value lets it be saved and revisited later.
+		private const int DECISION_AWAITING = 100000005;
 
 		// new_playoffoptiondecision optionset values
 		private const int PLAYOFF_DECISION_CLIENT_OPTED_IN = 100000000;
@@ -111,12 +115,19 @@ namespace Pl.Deal.OptionAutomation
 			int decisionValue = decision.Value;
 			tracing.Trace($"Deal Option Decision changed to: {decisionValue}");
 
-			bool isOptedIn = (decisionValue == DECISION_CLIENT_OPTED_IN ||
-							 decisionValue == DECISION_MUTUAL_OPTED_IN);
+			// CAREFUL: this is a whitelist - everything NOT listed here falls through to
+			// CloseDealAsLost plus the cascade over future years. A new option-set value that is
+			// not added here will silently close deals. Awaiting Decision means "not decided yet",
+			// so it must take no action at all.
+			bool noCloseAction = (decisionValue == DECISION_CLIENT_OPTED_IN ||
+								  decisionValue == DECISION_MUTUAL_OPTED_IN ||
+								  decisionValue == DECISION_AWAITING);
 
-			if (isOptedIn)
+			if (noCloseAction)
 			{
-				tracing.Trace("Decision is Opted-In. No close action.");
+				tracing.Trace(decisionValue == DECISION_AWAITING
+					? "Decision is Awaiting Decision. Nothing decided yet - no close action."
+					: "Decision is Opted-In. No close action.");
 				return;
 			}
 

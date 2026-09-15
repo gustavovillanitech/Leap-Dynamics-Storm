@@ -1,3 +1,26 @@
+-- ============================================================================
+-- INACTIVE INVENTORY MUST BE FILTERED OUT (added 2026-09-11)
+-- ============================================================================
+-- Verified in PROD: none of the three Filter(Inventories, ...) below carried a
+-- statecode condition, so a deactivated item kept showing in the builder. Test
+-- case: "50/50 Raffle" set to Inactive still appeared in the gallery.
+--
+-- This matters beyond one item: deactivating is how Storm retires inventory that
+-- is still attached to live deals (Ray, 2026-09-11). Without these filters the
+-- whole deactivate-instead-of-delete approach does nothing for the seller.
+--
+-- The three places are: cbPackage.Items, colSeasonInv (inside the ClearCollect
+-- that explodes package components) and galInventory.Items. All three now carry
+--     Status = 'Status (Inventories)'.Active
+-- statecode is delegable in the Dataverse connector, so no delegation warning.
+-- Let IntelliSense complete the enum name - it follows the table's display name.
+--
+-- SIDE EFFECT to be aware of: with colSeasonInv filtered, a package whose
+-- component has been deactivated now explodes WITHOUT that component, silently.
+-- That is the right behaviour (a retired asset should not be sold) but it is not
+-- visible to the user. Revisit if packages start coming out short.
+-- ============================================================================
+
 ========================================================================
 Deal Line Builder — Package expansion (Power Fx)
 Screen: DealLinesInventoryPicker  |  Staging collection: colCart
@@ -60,21 +83,24 @@ galInventory.Visible:
 // package controls below all use: Visible = varMode = "Packages"
 
 
--- 2) PACKAGE PICKER (dropdown/combobox ddPackage) ----------------------
+-- 2) PACKAGE PICKER (dropdown/combobox cbPackage) ----------------------
 // Packages are inventory rows whose product is a package, for the deal's season.
-ddPackage.Items:
+cbPackage.Items:
    Filter(
        Inventories,
        'Season Id'.Name = ddSeason.Selected.Name,
-       'Product Id'.'Is Package' = true
+       'Product Id'.'Is Package' = true,
+       Status = 'Status (Inventories)'.Active
    )
 // Combobox: set the display column to Name.
-// ddPackage.Selected is the package's Inventory row:
-//   - package product  = ddPackage.Selected.'Product Id'
-//   - package price     = ddPackage.Selected.'Rate Card'
+// cbPackage.Selected is the package's Inventory row:
+//   - package product  = cbPackage.Selected.'Product Id'
+//   - package price     = cbPackage.Selected.'Rate Card'
 
 
 -- 3) ADD PACKAGE -> explode components into colCart --------------------
+-- Control: btnAddPackage.OnSelect (NOT btnAddToDeal, which patches the cart into
+-- Deal Lines). It holds two ClearCollects: colAllPkgComp, then colSeasonInv.
 -- THREE dead-ends we hit and why this final version works:
 --   (a) Navigating the PK inside a delegated Filter
 --       ('Package Product'.'Product ID' = ...) throws at runtime:
@@ -91,7 +117,7 @@ ddPackage.Items:
 -- pulls rows then evaluates navigation client-side, which works), then match
 -- GUID == GUID over the collections. No delegation, no record comparison,
 -- no AddColumns.
-btnAddPackage.OnSelect:
+btnAcbPackage.OnSelect:
    // 0) Clear any previous message (shown via lblMsg / varMsg, see below)
    Set(varMsg, "");
 
@@ -111,7 +137,7 @@ btnAddPackage.OnSelect:
    ClearCollect(
        colSeasonInv,
        ForAll(
-           Filter(Inventories, 'Season Id'.Name = ddSeason.Selected.Name) As iv,
+           Filter(Inventories, 'Season Id'.Name = ddSeason.Selected.Name, Status = 'Status (Inventories)'.Active) As iv,
            {
                invId:    iv.Inventory,
                invName:  iv.Name,
@@ -207,6 +233,7 @@ galInventory.Items:
                Inventories,
                'Season Id'.Name = ddSeason.Selected.Name,
                'Is Package' <> true,
+               Status = 'Status (Inventories)'.Active,
                IsBlank(txtSearch.Text) || txtSearch.Text in Name,
                IsBlank(ddCollection.Selected.Value) || Collection.Name = ddCollection.Selected.Value,
                IsBlank(ddDivision.Selected.Value) || Division.Name = ddDivision.Selected.Value
@@ -220,15 +247,15 @@ lblComponentsTotal.Text:
    "Components total: " & Text(Sum(colCart, rate * quantity), "[$-en-US]$#,##0")
 
 lblPackagePrice.Text:
-   "Package price: " & Text(ddPackage.Selected.'Rate Card', "[$-en-US]$#,##0")
+   "Package price: " & Text(cbPackage.Selected.'Rate Card', "[$-en-US]$#,##0")
 
 lblDifference.Text:
    "Difference: " &
-   Text(Sum(colCart, rate * quantity) - ddPackage.Selected.'Rate Card', "[$-en-US]+$#,##0;-$#,##0")
+   Text(Sum(colCart, rate * quantity) - cbPackage.Selected.'Rate Card', "[$-en-US]+$#,##0;-$#,##0")
 
 // optional: color red when over
 lblDifference.Color:
-   If( Sum(colCart, rate * quantity) > ddPackage.Selected.'Rate Card',
+   If( Sum(colCart, rate * quantity) > cbPackage.Selected.'Rate Card',
        RGBA(178,59,59,1), RGBA(50,49,48,1) )
 
 
@@ -237,7 +264,7 @@ lblDifference.Color:
 btnApplyPkgDiscount.OnSelect:
    UpdateIf(
        colCart,
-       packageName = ddPackage.Selected.Name,
+       packageName = cbPackage.Selected.Name,
        {
            rate:     rateCard * (1 - Value(txtPkgDiscount.Text) / 100),
            discount: Value(txtPkgDiscount.Text)

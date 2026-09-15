@@ -79,14 +79,24 @@ namespace ApplyInventoryUpdates
         /// Leave empty to process every row.</summary>
         private static readonly string PilotExcelRows = Cfg("PilotExcelRows", "");
 
-        /// <summary>What to do with the rows the Storm team marked for removal, once the tool has
-        /// checked whether each one is used on a deal line.
-        ///   Report     - report only (default).
-        ///   Deactivate - set statecode Inactive on the rows that NO deal line uses.
-        ///   Delete     - delete the rows that NO deal line uses.
-        /// A row that IS used on a deal line is NEVER touched in any mode - it is reported so
-        /// Storm can decide, because deleting it would break the deal line pointing at it.</summary>
-        private static readonly string RemovalMode = Cfg("RemovalMode", "Report");
+        // What to do with the rows the Storm team marked for removal. The tool checks deal-line
+        // usage first and then applies the setting for that bucket. Report | Deactivate | Delete.
+        //
+        // ⚠ DELETE IS NOT COVERED BY RestoreFromBackup. The restore replays field values with an
+        // Update; a deleted record cannot be updated back into existence. The deleted rows ARE
+        // written to the inventory backup CSV so the data survives for a manual re-create, but
+        // the GUIDs are gone for good. Deactivate is fully reversible.
+
+        /// <summary>Rows no deal line uses. Safe to delete.</summary>
+        private static readonly string RemovalModeUnused = Cfg("RemovalModeUnused", "Report");
+
+        /// <summary>Rows a deal line points at. Delete is REFUSED here - it would break the deal
+        /// line. Deactivate keeps the deal intact and hides the item from new deals.</summary>
+        private static readonly string RemovalModeInUse = Cfg("RemovalModeInUse", "Report");
+
+        /// <summary>Rows whose product is used elsewhere even though the item itself is not
+        /// (CPA Garage). Left alone by default - Storm wants duplicates merged first.</summary>
+        private static readonly string RemovalModeProductInUse = Cfg("RemovalModeProductInUse", "Report");
 
         /// <summary>Season filter for the name fallback (same rule as Export2026Inventory).</summary>
         private const string SeasonFilter = "2026";
@@ -177,6 +187,7 @@ namespace ApplyInventoryUpdates
         private sealed class Removal
         {
             public int ExcelRow; public Guid Id; public string Item, SaysWhat, Conflict;
+            public Entity Record;   // snapshot, so a deleted row still lands in the backup
             public bool FoundInCrm;
             public int DealLines; public List<string> Deals = new List<string>();
             public int DealLinesViaProduct;
@@ -396,7 +407,9 @@ namespace ApplyInventoryUpdates
 
                 // ---- 6) apply ----
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"\nAbout to write {changes.Count} changes to {EnvTag()}. Type YES to continue:");
+                int rmActs = removals.Count(x => x.FoundInCrm && !ModeFor(x).Equals("Report", StringComparison.OrdinalIgnoreCase));
+                Console.WriteLine($"\nAbout to write {changes.Count} changes to {EnvTag()}" +
+                                  (rmActs > 0 ? $", plus {rmActs} removal(s)" : "") + ". Type YES to continue:");
                 Console.ResetColor();
                 if ((Console.ReadLine() ?? "").Trim() != "YES") { Bye("Cancelled - nothing was written."); return; }
 
@@ -404,9 +417,9 @@ namespace ApplyInventoryUpdates
                 // that carry collection / division / name / descriptions. Restore with RestoreFromBackup=<stamp>.
                 string bkInv = Path.Combine(outDir, $"InventoryUpdate_BACKUP_INVENTORY_{EnvTag()}_{stamp}.csv");
                 string bkProd = Path.Combine(outDir, $"InventoryUpdate_BACKUP_PRODUCT_{EnvTag()}_{stamp}.csv");
-                WriteBackup(bkInv, changes, invById);
+                WriteBackup(bkInv, changes, invById, removals);
                 WriteProductBackup(bkProd, prodById);
-                Console.WriteLine($"Backup (inventory, {changes.Select(c => c.Id).Distinct().Count()} records) : {bkInv}");
+                Console.WriteLine($"Backup (inventory, {changes.Select(c => c.Id).Distinct().Count() + removals.Count(x => x.Record != null && !changes.Any(c => c.Id == x.Id))} records) : {bkInv}");
                 Console.WriteLine($"Backup (product,   {prodById.Count} records) : {bkProd}");
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine($"To roll this run back: set RestoreFromBackup={stamp} in App.config and run again.");
@@ -851,6 +864,7 @@ namespace ApplyInventoryUpdates
                 Entity e;
                 if (!inv.TryGetValue(rm.Id, out e)) continue;
                 rm.FoundInCrm = true;
+                rm.Record = e;
                 var pr = e.GetAttributeValue<EntityReference>(InvProduct);
                 if (pr != null && !productToRemoval.ContainsKey(pr.Id)) productToRemoval[pr.Id] = rm;
             }
@@ -894,6 +908,21 @@ namespace ApplyInventoryUpdates
             return all;
         }
 
+
+        /// <summary>Which setting governs this removal, given what the deal-line check found.</summary>
+        private static string ModeFor(Removal rm)
+        {
+            if (!rm.FoundInCrm) return "Report";
+            if (rm.DealLines > 0) return RemovalModeInUse;
+            if (rm.DealLinesViaProduct > 0) return RemovalModeProductInUse;
+            return RemovalModeUnused;
+        }
+
+        private static string Did(string mode) =>
+            mode.Equals("Delete", StringComparison.OrdinalIgnoreCase) ? "deleted"
+          : mode.Equals("Deactivate", StringComparison.OrdinalIgnoreCase) ? "made inactive"
+          : "reported only, not yet removed";
+
         /// <summary>Turns a checked removal into a question that carries the answer where we have one.</summary>
         private static OpenItem RemovalQuestion(Removal rm)
         {
@@ -911,7 +940,7 @@ namespace ApplyInventoryUpdates
                 {
                     ExcelRow = rm.ExcelRow.ToString(), Item = rm.Item, Topic = "Marked for removal - IN USE on deals",
                     WhatTheFileSays = says + $" It is currently on {rm.DealLines} deal line(s), across: {string.Join("; ", rm.Deals)}.",
-                    WhatWeNeed = "Deleting it would break those deal lines. We recommend making it inactive instead: the deals stay intact and the item stops showing up for new ones. Confirm, or tell us those deals should be adjusted first."
+                    WhatWeNeed = $"Deleting it would break those deal lines, so it was {Did(ModeFor(rm))} instead - the deals stay intact and the item stops showing up for new ones."
                 };
 
             if (rm.DealLinesViaProduct > 0)
@@ -922,9 +951,7 @@ namespace ApplyInventoryUpdates
                     WhatWeNeed = "We will make the item inactive rather than delete it, so nothing on those deals is affected. Tell us if you want it deleted outright."
                 };
 
-            string done = RemovalMode.Equals("Delete", StringComparison.OrdinalIgnoreCase) ? "deleted"
-                        : RemovalMode.Equals("Deactivate", StringComparison.OrdinalIgnoreCase) ? "made inactive"
-                        : "reported only, not yet removed";
+            string done = Did(ModeFor(rm));
             return new OpenItem
             {
                 ExcelRow = rm.ExcelRow.ToString(), Item = rm.Item, Topic = "Marked for removal - not in use",
@@ -1062,22 +1089,35 @@ namespace ApplyInventoryUpdates
             }
             Console.WriteLine($"Inventory records updated             : {okI} ok, {failI} failed");
 
-            // 0) removals the Storm team asked for - ONLY the ones no deal line uses.
-            //    Anything in use is left alone and reported; deleting it would break the deal line.
-            bool deleteMode = RemovalMode.Equals("Delete", StringComparison.OrdinalIgnoreCase);
-            bool deactivateMode = RemovalMode.Equals("Deactivate", StringComparison.OrdinalIgnoreCase);
-            if ((deleteMode || deactivateMode) && removals.Count > 0)
+            // 0) removals. Each row is handled by the setting for its bucket, decided by the
+            //    deal-line check. Delete is refused for anything a deal line points at.
+            if (removals.Count > 0)
             {
-                int okR = 0, failR = 0, held = 0;
+                int del = 0, deact = 0, fail = 0, left = 0, refused = 0;
                 foreach (Removal rm in removals)
                 {
-                    if (!rm.Safe) { if (rm.FoundInCrm) held++; continue; }
+                    if (!rm.FoundInCrm) continue;
+                    string mode = ModeFor(rm);
+                    bool wantDelete = mode.Equals("Delete", StringComparison.OrdinalIgnoreCase);
+                    bool wantDeactivate = mode.Equals("Deactivate", StringComparison.OrdinalIgnoreCase);
+                    if (!wantDelete && !wantDeactivate) { left++; continue; }
+
+                    if (wantDelete && (rm.DealLines > 0 || rm.DealLinesViaProduct > 0))
+                    {
+                        refused++;
+                        Say($"REFUSED delete on row {rm.ExcelRow} \"{rm.Item}\" - {rm.DealLines} deal line(s) " +
+                            $"and {rm.DealLinesViaProduct} product reference(s). Deactivate it instead.");
+                        continue;
+                    }
+
                     try
                     {
-                        if (deleteMode)
+                        if (wantDelete)
                         {
                             svc.Delete(InvEntity, rm.Id);
-                            Say($"DELETED row {rm.ExcelRow} \"{rm.Item}\" [{rm.Id}] - no deal line used it.");
+                            del++;
+                            Say($"DELETED row {rm.ExcelRow} \"{rm.Item}\" [{rm.Id}] - no deal line used it. " +
+                                "NOT recoverable by RestoreFromBackup; the values are in the inventory backup CSV.");
                         }
                         else
                         {
@@ -1086,13 +1126,21 @@ namespace ApplyInventoryUpdates
                                 ["statecode"] = new OptionSetValue(1),   // Inactive
                                 ["statuscode"] = new OptionSetValue(2)   // Inactive
                             });
-                            Say($"DEACTIVATED row {rm.ExcelRow} \"{rm.Item}\" [{rm.Id}] - no deal line used it.");
+                            deact++;
+                            Say($"DEACTIVATED row {rm.ExcelRow} \"{rm.Item}\" [{rm.Id}] - " +
+                                $"{rm.DealLines} deal line(s) keep pointing at it, untouched.");
                         }
-                        okR++;
                     }
-                    catch (Exception ex) { failR++; Say($"ERROR removing {rm.Id}: {ex.Message}"); }
+                    catch (Exception ex) { fail++; Say($"ERROR removing {rm.Id}: {ex.Message}"); }
                 }
-                Console.WriteLine($"Items removed ({RemovalMode.ToLowerInvariant()})       : {okR} ok, {failR} failed, {held} left in place because deals use them");
+                Console.WriteLine($"Removals : {del} deleted, {deact} deactivated, {left} left as-is, {refused} refused, {fail} failed");
+                if (del > 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"  {del} record(s) were DELETED. RestoreFromBackup cannot bring them back -");
+                    Console.WriteLine("  their values are preserved in the inventory backup CSV for a manual re-create.");
+                    Console.ResetColor();
+                }
             }
 
             // 4) keep the product name aligned with the renamed inventory item
@@ -1323,13 +1371,19 @@ namespace ApplyInventoryUpdates
             return rows;
         }
 
-        private static void WriteBackup(string path, List<Change> changes, Dictionary<Guid, Entity> inv)
+        private static void WriteBackup(string path, List<Change> changes, Dictionary<Guid, Entity> inv, List<Removal> removals)
         {
             var sb = new StringBuilder();
             sb.AppendLine("InventoryId,Name,Collection,Division,Rate,Quantity,ExternalDescription,InternalDescription");
-            foreach (Guid id in changes.Select(c => c.Id).Distinct())
+            var toBackup = new Dictionary<Guid, Entity>();
+            foreach (Guid id in changes.Select(c => c.Id).Distinct()) toBackup[id] = inv[id];
+            // removal rows are not in `changes`, and a deleted one is gone for good - back it up
+            foreach (Removal rm in removals)
+                if (rm.Record != null && !toBackup.ContainsKey(rm.Id)) toBackup[rm.Id] = rm.Record;
+
+            foreach (Guid id in toBackup.Keys)
             {
-                Entity e = inv[id];
+                Entity e = toBackup[id];
                 var cr = e.GetAttributeValue<EntityReference>(InvCollection);
                 var dr = e.GetAttributeValue<EntityReference>(InvDivision);
                 var m = e.GetAttributeValue<Money>(InvRate);
