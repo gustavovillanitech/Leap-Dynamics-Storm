@@ -9,10 +9,10 @@
     <add key="Password" value="" />
 
     <!-- Workbook returned by the Storm team. -->
-    <add key="SourceWorkbook" value="C:\Customer Docs\Storm\Deal Options And PlayOff Automation\Inventory2026_BECU_20260915.xlsx" />
+    <add key="SourceWorkbook" value="C:\Customer Docs\Storm\Deal Options And PlayOff Automation\Inventory2026_Storm_Update_Template.xlsx" />
 
     <!-- true = preview + report only. Set to false to write (still asks for a typed YES). -->
-    <add key="DryRun" value="false" />
+    <add key="DryRun" value="true" />
     <!-- Create a new_collection record when the requested collection does not exist. -->
     <add key="AutoCreateCollections" value="true" />
     <!-- Keep the product name in sync when an inventory item is renamed. -->

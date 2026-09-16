@@ -1,4 +1,4 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using Microsoft.Xrm.Tooling.Connector;
@@ -53,7 +53,7 @@ namespace ApplyInventoryUpdates
         private const string SourceSheet = "2026 Inventory";
 
         /// <summary>true = preview + report only, no writes. Flip to false and type YES to apply.</summary>
-        private static readonly bool DryRun = CfgBool("DryRun", false);
+        private static readonly bool DryRun = CfgBool("DryRun", true);
 
         /// <summary>Create a new_collection record when the requested collection does not exist.</summary>
         private static readonly bool AutoCreateCollections = CfgBool("AutoCreateCollections", true);
@@ -549,14 +549,18 @@ namespace ApplyInventoryUpdates
                     changes.Add(New(r, "Collection", r.Collection, r.NewCollection, ""));
 
                 // ---- division ----
-                // Until 2026-09-15 anything other than "Storm" was parked as an open question,
-                // because the workbook said "Practice Facility", the notes tab said "BECU STORM
-                // CENTER" and one row was already renamed "BECU Storm Center Tour" - three names
-                // for one thing. Ray settled it: the practice facility is BECU Storm Center.
-                // The general path is correct now, and a division that does not exist in CRM is
-                // still caught below and reported rather than invented.
                 if (!string.IsNullOrEmpty(r.NewDivision))
-                    changes.Add(New(r, "Division", r.Division, r.NewDivision, ""));
+                {
+                    if (string.Equals(r.NewDivision, "Storm", StringComparison.OrdinalIgnoreCase))
+                        changes.Add(New(r, "Division", r.Division, r.NewDivision, ""));
+                    else
+                        open.Add(new OpenItem
+                        {
+                            ExcelRow = r.ExcelRow.ToString(), Item = r.Name, Topic = "New division",
+                            WhatTheFileSays = $"New Division = \"{r.NewDivision}\"",
+                            WhatWeNeed = "The workbook says \"Practice Facility\", the notes tab says \"new division BECU STORM CENTER\" and one item is renamed \"BECU Storm Center Tour\". Which single name should we create?"
+                        });
+                }
 
                 // ---- rate ----
                 if (!string.IsNullOrEmpty(r.NewRate))

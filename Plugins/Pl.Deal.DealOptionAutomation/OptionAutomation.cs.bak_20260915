@@ -299,35 +299,6 @@ namespace Pl.Deal.OptionAutomation
 				return;
 			}
 
-			// Check: the season must be flagged as having qualified for the playoffs.
-			//
-			// Added 2026-09-15 (Christine's request). Until now a deal closing Won with Opt-In or In
-			// created a playoff deal immediately, at contract time - months before anyone knows
-			// whether the team makes the playoffs. That produced 8 playoff deals for a 2026 season
-			// that did not qualify. The contract says the partner HAS the playoff option; it does
-			// not say the games will happen. Those are two different facts, and only the season
-			// record knows the second one.
-			//
-			// A season with the flag absent or off is treated as not qualified, so nothing is
-			// created until a human sets it. That is deliberate: the failure mode of creating
-			// nothing is a missing deal someone asks for, while the failure mode of creating too
-			// early is invoices and inventory for games that were never played.
-			EntityReference seasonRef = deal.GetAttributeValue<EntityReference>("new_season");
-			if (seasonRef == null)
-			{
-				tracing.Trace("Skipping: deal has no Season, so playoff qualification cannot be checked.");
-				return;
-			}
-
-			Entity season = service.Retrieve("new_season", seasonRef.Id, new ColumnSet("new_playoffsqualified", "new_name"));
-			bool qualified = season.GetAttributeValue<bool>("new_playoffsqualified");
-
-			if (!qualified)
-			{
-				tracing.Trace($"Skipping: season '{season.GetAttributeValue<string>("new_name")}' is not flagged as Playoffs Qualified.");
-				return;
-			}
-
 			// Idempotency: does a Playoff Deal already exist for this regular deal?
 			if (PlayoffDealExists(target.Id, service, tracing))
 			{
