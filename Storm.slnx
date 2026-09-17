@@ -20,6 +20,7 @@
     <Project Path="Consoles/RateCardCleanupAudit/RateCardCleanupAudit.csproj" Id="00efb21d-db6d-425f-8baa-e77c44d124c0" />
     <Project Path="Consoles/DeleteOrphanDeals/DeleteOrphanDeals.csproj" Id="a1b2c3d4-0001-4e5f-9a0b-000000000001" />
     <Project Path="Consoles/DeletePlayoffDeals/DeletePlayoffDeals.csproj" Id="2e7c4f19-8a03-4d62-b517-c90f4a8e2d77" />
+    <Project Path="Consoles/CloseStuckTicketingOpps/CloseStuckTicketingOpps.csproj" Id="7f3d91c4-2b58-4a66-9e31-6c0d5a17b482" />
     <Project Path="Consoles/EscalatorRenewalExport/EscalatorRenewalExport.csproj" Id="e6180258-95dd-4215-8742-0c9642b2f2c5" />
     <Project Path="Consoles/TrakImport/TrakImport.csproj" />
     <Project Path="Consoles/UpdateActualRevenueOpportunities/UpdateActualRevenueOpportunities.csproj" Id="81c76b95-3345-4d5c-8de7-4305b34903db" />
