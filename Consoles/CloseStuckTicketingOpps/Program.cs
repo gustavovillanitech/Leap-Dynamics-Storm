@@ -20,7 +20,7 @@ namespace CloseStuckTicketingOpps
 	/// ROOT CAUSE. The background flow "Close Ticketing Opportunity" owns this transition, and
 	/// its trigger carries two conditions, not one:
 	///
-	///     new_ticketingstage IN (100000005, 100000006, 100000022, 100000029, 100000030)
+	///     new_ticketingstage IN (100000005, 100000006, 100000022, 100000029, 100000030, 100000043)
 	///     AND new_previousphonecallguid == null
 	///
 	/// An opportunity that was worked from a logged phone call has a value in
@@ -37,6 +37,7 @@ namespace CloseStuckTicketingOpps
 	///   100000029 11 - Closed Auto Renewed-> WinOpportunity,  statuscode 3, actualrevenue = estimatedvalue
 	///   100000006 Closed Lost             -> LoseOpportunity, statuscode 4, actualrevenue = 0
 	///   100000030 12 - Closed Opted Out    -> LoseOpportunity, statuscode 4, actualrevenue = 0
+	///   100000043 Closed - Opted Out      -> LoseOpportunity, statuscode 4, actualrevenue = 0
 	///
 	/// On the two losing stages, if new_lostreason is empty it is stamped with Unknown
 	/// (100000024) BEFORE the close, because a closed opportunity can no longer be updated.
@@ -63,8 +64,12 @@ namespace CloseStuckTicketingOpps
 		private const bool DRY_RUN = true;
 
 		// Stamp Lost Reason = Unknown when the field is empty on a losing stage.
-		private const bool SET_UNKNOWN_LOST_REASON = true;
+		private const bool SET_UNKNOWN_LOST_REASON = false;
 		private const int LOST_REASON_UNKNOWN = 100000024;
+
+		// Only opportunities whose NAME contains this are closed; the rest are reported and
+		// written to their own CSV so somebody can decide on them. Empty string = close all.
+		private const string NAME_FILTER = "Membership Renewal";
 
 		// Where the CSVs go. The "before" CSV is written before the first change.
 		private const string BACKUP_FOLDER = @"C:\Customer Docs\Storm\Ticketing";
@@ -82,7 +87,8 @@ namespace CloseStuckTicketingOpps
 			{ 100000022, true  }, // 9 - Experience Complete
 			{ 100000029, true  }, // 11 - Closed - Auto Renewed
 			{ 100000006, false }, // Closed Lost
-			{ 100000030, false }  // 12 - Closed - Opted Out
+			{ 100000030, false }, // 12 - Closed - Opted Out
+			{ 100000043, false }  // Closed - Opted Out (Service stage list - added 2026-09-17)
 		};
 
 		private class Row
@@ -98,6 +104,7 @@ namespace CloseStuckTicketingOpps
 			public string Owner;
 			public string ModifiedBy;
 			public DateTime Modified;
+			public bool InScope;
 
 			// filled by the run
 			public bool LostReasonStamped;
@@ -111,6 +118,7 @@ namespace CloseStuckTicketingOpps
 			Console.WriteLine("  CLOSE STUCK TICKETING OPPORTUNITIES");
 			Console.WriteLine("=========================================================");
 			Console.WriteLine($"  Environment : {ENV_URL}");
+			Console.WriteLine($"  Name filter : {(NAME_FILTER.Length == 0 ? "(none - all records)" : NAME_FILTER)}");
 			Console.WriteLine($"  Lost Reason : {(SET_UNKNOWN_LOST_REASON ? "stamp Unknown (" + LOST_REASON_UNKNOWN + ") when empty" : "leave as is")}");
 			Console.Write("  Mode        : ");
 
@@ -172,6 +180,9 @@ namespace CloseStuckTicketingOpps
 
 				Report(rows);
 
+				List<Row> target = rows.Where(r => r.InScope).ToList();
+				List<Row> outOfScope = rows.Where(r => !r.InScope).ToList();
+
 				// Written before anything changes. If it cannot be written, nothing runs.
 				string backup = WriteCsv(rows, "BEFORE");
 				if (backup == null)
@@ -184,13 +195,22 @@ namespace CloseStuckTicketingOpps
 				}
 				Console.WriteLine($"\nBefore-state written: {backup}");
 
+				if (outOfScope.Count > 0)
+				{
+					string notClosed = WriteCsv(outOfScope, "NOT_CLOSED");
+					if (notClosed != null)
+						Console.WriteLine($"Out of scope ({outOfScope.Count}) written: {notClosed}");
+				}
+
 				if (DRY_RUN)
 				{
-					int wouldWin = rows.Count(r => r.IsWin);
-					int wouldLose = rows.Count(r => !r.IsWin);
-					int wouldStamp = rows.Count(r => !r.IsWin && !r.LostReason.HasValue);
+					int wouldWin = target.Count(r => r.IsWin);
+					int wouldLose = target.Count(r => !r.IsWin);
+					int wouldStamp = target.Count(r => !r.IsWin && !r.LostReason.HasValue);
 
 					Console.WriteLine($"\nDRY RUN - would close {wouldWin} as Won and {wouldLose} as Lost.");
+					if (outOfScope.Count > 0)
+						Console.WriteLine($"          would leave {outOfScope.Count} record(s) untouched (name filter).");
 					if (SET_UNKNOWN_LOST_REASON)
 						Console.WriteLine($"          would stamp Lost Reason = Unknown on {wouldStamp} record(s).");
 					Done();
@@ -201,7 +221,7 @@ namespace CloseStuckTicketingOpps
 
 				int closed = 0, failed = 0, stamped = 0;
 
-				foreach (Row r in rows)
+				foreach (Row r in target)
 				{
 					try
 					{
@@ -248,12 +268,13 @@ namespace CloseStuckTicketingOpps
 					}
 				}
 
-				string results = WriteCsv(rows, "RESULT");
+				string results = WriteCsv(target, "RESULT");
 
 				Console.WriteLine("\n=========================================================");
 				Console.WriteLine($"  Closed                  : {closed}");
 				Console.WriteLine($"  Lost Reason stamped     : {stamped}");
 				Console.WriteLine($"  Failed / still open     : {failed}");
+				Console.WriteLine($"  Left untouched (filter) : {outOfScope.Count}");
 				if (results != null) Console.WriteLine($"  Result CSV              : {results}");
 				Console.WriteLine("=========================================================");
 
@@ -324,6 +345,10 @@ namespace CloseStuckTicketingOpps
 				});
 			}
 
+			foreach (Row r in rows)
+				r.InScope = NAME_FILTER.Length == 0 ||
+					(r.Name ?? "").IndexOf(NAME_FILTER, StringComparison.OrdinalIgnoreCase) >= 0;
+
 			return rows.OrderBy(r => r.IsWin).ThenBy(r => r.Name).ToList();
 		}
 
@@ -361,20 +386,22 @@ namespace CloseStuckTicketingOpps
 		{
 			int withCall = rows.Count(r => !string.IsNullOrEmpty(r.PreviousCall));
 
-			Console.WriteLine($"Open opportunities sitting in a closing stage: {rows.Count}");
+			Console.WriteLine($"Open opportunities sitting in a closing stage: {rows.Count}" + (NAME_FILTER.Length == 0 ? "" : $"   (in scope: {rows.Count(r => r.InScope)}, out of scope: {rows.Count(r => !r.InScope)})"));
 			Console.WriteLine($"  of those, carrying a previous phone call GUID: {withCall}  <- the flow skips these\n");
 			Console.WriteLine($"{"Opportunity",-52}{"Stage",-26}{"Action",-8}{"LostReason",-12}{"PrevCall",-10}Owner");
 
 			foreach (Row r in rows)
 			{
-				if (!string.IsNullOrEmpty(r.PreviousCall)) Console.ForegroundColor = ConsoleColor.Yellow;
+				if (!r.InScope) Console.ForegroundColor = ConsoleColor.DarkGray;
+				else if (!string.IsNullOrEmpty(r.PreviousCall)) Console.ForegroundColor = ConsoleColor.Yellow;
 				Console.WriteLine(
 					$"{Trim(r.Name, 50),-52}" +
 					$"{Trim(r.StageLabel, 24),-26}" +
 					$"{(r.IsWin ? "Win" : "Lose"),-8}" +
 					$"{(r.LostReason.HasValue ? r.LostReason.Value.ToString() : (r.IsWin ? "-" : "EMPTY")),-12}" +
 					$"{(string.IsNullOrEmpty(r.PreviousCall) ? "no" : "yes"),-10}" +
-					$"{Trim(r.Owner, 22)}");
+					$"{Trim(r.Owner, 22)}" +
+					(r.InScope ? "" : "   [not in scope]"));
 				Console.ResetColor();
 			}
 		}
@@ -387,7 +414,7 @@ namespace CloseStuckTicketingOpps
 			try
 			{
 				var sb = new StringBuilder();
-				sb.AppendLine("OpportunityId,Name,Stage,StageLabel,Action,EstimatedValue,LostReasonBefore,LostReasonStamped,PreviousPhoneCallGuid,Owner,ModifiedBy,ModifiedOn,Outcome,Error");
+				sb.AppendLine("OpportunityId,Name,Stage,StageLabel,Action,InScope,EstimatedValue,LostReasonBefore,LostReasonStamped,PreviousPhoneCallGuid,Owner,ModifiedBy,ModifiedOn,Outcome,Error");
 
 				foreach (Row r in rows)
 				{
@@ -397,6 +424,7 @@ namespace CloseStuckTicketingOpps
 						r.Stage.ToString(),
 						Csv(r.StageLabel),
 						r.IsWin ? "Win" : "Lose",
+						r.InScope ? "yes" : "no",
 						r.EstimatedValue.ToString(CultureInfo.InvariantCulture),
 						r.LostReason.HasValue ? r.LostReason.Value.ToString() : "",
 						r.LostReasonStamped ? "Unknown" : "",
