@@ -23,18 +23,18 @@ namespace InventoryCloning
 		// CONFIGURATION - review every line before running
 		// =====================================================================
 
-		// PRODUCTION. Change deliberately, never by accident.
-		private const string ENV_URL = "https://stormbasketball.crm.dynamics.com/";
+		// Sandbox. Change deliberately, never by accident.
+		private const string ENV_URL = "https://org00bff505.crm.dynamics.com/";
 
 		// true  = report what would happen and write nothing.
 		// false = actually create the records.
-		private const bool DRY_RUN = true;
+		private const bool DRY_RUN = false;
 
 		// The season whose inventory is the template.
 		private const int SOURCE_YEAR = 2026;
 
 		// The seasons to create the inventory for.
-		private static readonly int[] TARGET_YEARS = { 2027, 2028 };
+		private static readonly int[] TARGET_YEARS = { 2030 };
 
 		// Only seasons whose name contains one of these is processed. Keeps the run away from
 		// season records that belong to something else.

@@ -14,6 +14,7 @@
     <Project Path="Consoles/InventoryRecalculator/InventoryRecalculator.csproj" Id="4a35991c-a720-4bd3-b94e-f95d6926be01" />
     <Project Path="Consoles/LoadDescriptions/LoadDescriptions.csproj" Id="e3a2bba4-bb29-4f5e-a4cc-ec960da96bf0" />
     <Project Path="Consoles/LoadEscalatorOptions/LoadEscalatorOptions.csproj" Id="a1b2c3d4-0004-4e5f-9a0b-000000000004" />
+    <Project Path="Consoles/LoadClosedLostGrids/LoadClosedLostGrids.csproj" Id="5c1f2a80-71b4-4e39-9d6a-3f02c8b15a44" />
     <Project Path="Consoles/MergeDuplicateAccounts/MergeDuplicateAccounts.csproj" Id="a1b2c3d4-0003-4e5f-9a0b-000000000003" />
     <Project Path="Consoles/MirrorInventoryToSandbox/MirrorInventoryToSandbox.csproj" Id="21e0b954-ac78-4dcb-9ab9-88a1bfc12335" />
     <Project Path="Consoles/MultiYearReadiness/MultiYearReadiness.csproj" Id="405de698-0603-4cbd-81b0-a47fe766614d" />

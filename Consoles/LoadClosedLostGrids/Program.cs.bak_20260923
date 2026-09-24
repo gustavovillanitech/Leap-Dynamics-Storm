@@ -1,0 +1,518 @@
+using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
+using Microsoft.Xrm.Sdk.Metadata;
+using Microsoft.Xrm.Sdk.Query;
+using Microsoft.Xrm.Tooling.Connector;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+namespace LoadClosedLostGrids
+{
+	/// <summary>
+	/// Loads the 2026 closed-lost pricing grids into Dynamics as Opportunity + Deal + Deal Lines.
+	///
+	/// Source: the grids Storm keeps in SharePoint under Closed Lost Pricing Grids (NS and Tiffany
+	/// folders). They are fifteen spreadsheets that only look alike, so they are NOT read here.
+	/// They are flattened into one tab-separated file first, and this console reads that. The
+	/// input is therefore auditable and diffable, and a re-run after Storm corrects a mapping
+	/// touches only what changed.
+	///
+	/// Ray's instruction, 2026-09-22: do not spend hours guessing which inventory item a
+	/// deliverable means. So a line whose inventory item is blank or unresolvable is REPORTED,
+	/// never guessed at, and the deal is still created with the rest.
+	///
+	/// Safe to re-run: a client that already has a 2026 deal is skipped, and within a deal an
+	/// existing line for the same inventory item is skipped rather than duplicated.
+	/// </summary>
+	internal class Program
+	{
+		// =====================================================================
+		// CONFIGURATION - review every line before running
+		// =====================================================================
+
+		// PRODUCTION. Change deliberately, never by accident.
+		private const string ENV_URL = "https://stormbasketball.crm.dynamics.com/";
+
+		// true  = report what would happen and write nothing.
+		// false = actually create the records.
+		private const bool DRY_RUN = true;
+
+		// Flattened grids. One row per deliverable. Produced from the mapping workbook.
+		private const string INPUT_TSV = @"C:\Customer Docs\Storm\Deal Options And PlayOff Automation\Update Opps\ClosedLostGrids_Input.tsv";
+
+		private const string SEASON_NAME = "2026 - Storm";
+
+		// Clients whose records already exist in Dynamics under some other status. Creating a
+		// second record for them is a decision for Ray, not for this console, so they stay out
+		// until he answers. Remove a name from this list once he does.
+		private static readonly HashSet<string> SKIP_CLIENTS = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+			"Amazon Fashion", "KIA", "SGB Law", "Lucky Strike", "State Street",
+			// BECU is a sixth case of the same kind, and a harder one: this grid is an UPSELL on an
+			// account that already carries a live 2026 deal worth $1.19M. It must not be loaded as
+			// a plain second deal without Ray saying how it should sit beside the existing one.
+			"BECU Upsell"
+		};
+
+		// An account that does not exist is reported, not invented. Turn this on only once
+		// somebody has confirmed these really are new accounts and not spelling variants of
+		// accounts that already exist - that is how duplicate accounts get made.
+		private const bool CREATE_MISSING_ACCOUNTS = false;
+
+		// The opportunity's own state. The sales stage is always set; flipping the record to the
+		// system-level Lost state is a separate, harder-to-undo act, so it is opt-in.
+		private const bool ALSO_CLOSE_OPPORTUNITY_STATE = false;
+
+		// Labels, not magic numbers. The option values are resolved from metadata at runtime so a
+		// renamed or renumbered option surfaces as a clear error instead of silently writing the
+		// wrong status - which is exactly how the "Team Didn't Qualify" whitelist bug happened.
+		private const string SALESSTAGE_LOST_LABEL = "Closed Lost";
+		private const string DEALSTATUS_LOST_LABEL = "Closed Lost";
+
+		// =====================================================================
+
+		private const string DEAL_ENTITY = "new_deals";
+		private const string LINE_ENTITY = "new_deallines";
+		private const string INVENTORY_ENTITY = "new_inventory";
+		private const string SEASON_ENTITY = "new_season";
+
+		private sealed class GridLine
+		{
+			public string Client;
+			public string Deliverable;
+			public decimal? Qty;
+			public decimal? Rate;
+			public decimal? Fees;
+			public string InventoryName;
+		}
+
+		private sealed class Outcome
+		{
+			public string Client = "";
+			public string Status = "";
+			public string Detail = "";
+			public int LinesCreated;
+			public int LinesSkipped;
+			public decimal Total;
+		}
+
+		static void Main()
+		{
+			Console.OutputEncoding = Encoding.UTF8;
+			Console.WriteLine("=========================================================");
+			Console.WriteLine("  LOAD CLOSED-LOST PRICING GRIDS");
+			Console.WriteLine("=========================================================");
+			Console.WriteLine("  Environment : " + ENV_URL);
+			Console.WriteLine("  Season      : " + SEASON_NAME);
+			Console.WriteLine("  Input       : " + INPUT_TSV);
+			Console.Write("  Mode        : ");
+			if (DRY_RUN)
+			{
+				Console.ForegroundColor = ConsoleColor.Cyan;
+				Console.WriteLine("DRY RUN - nothing will be written");
+			}
+			else
+			{
+				Console.ForegroundColor = ConsoleColor.Yellow;
+				Console.WriteLine("LIVE - records will be created");
+			}
+			Console.ResetColor();
+			Console.WriteLine("=========================================================");
+
+			if (!File.Exists(INPUT_TSV))
+			{
+				Console.WriteLine("\nInput file not found. Nothing to do.");
+				Console.ReadLine();
+				return;
+			}
+
+			Console.Write("\nType YES to continue: ");
+			if ((Console.ReadLine() ?? "").Trim().ToUpperInvariant() != "YES")
+			{
+				Console.WriteLine("\nCancelled. Press Enter to exit...");
+				Console.ReadLine();
+				return;
+			}
+
+			List<GridLine> lines = ReadInput(INPUT_TSV);
+			Console.WriteLine("\nRead " + lines.Count + " deliverable row(s) for "
+				+ lines.Select(l => l.Client).Distinct().Count() + " client(s).");
+
+			// Interactive sign-in. No credentials live in this file.
+			string cs = "AuthType=OAuth;Url=" + ENV_URL
+				+ ";AppId=51f81489-12ee-4a9e-aaae-a2591f45987d"
+				+ ";RedirectUri=app://58145B91-0C36-4500-8554-080854F2AC97;LoginPrompt=Auto";
+
+			Console.WriteLine("\nConnecting...");
+			CrmServiceClient service = new CrmServiceClient(cs);
+			if (!service.IsReady)
+			{
+				Console.WriteLine("Connection error: " + service.LastCrmError);
+				Console.ReadLine();
+				return;
+			}
+			Console.WriteLine("Connected.\n");
+
+			var report = new List<Outcome>();
+			var unmapped = new List<GridLine>();
+
+			try
+			{
+				EntityReference season = FindSeason(service, SEASON_NAME);
+				if (season == null)
+				{
+					Console.WriteLine("Season '" + SEASON_NAME + "' not found. Nothing to do.");
+					Console.ReadLine();
+					return;
+				}
+
+				int stageLost = ResolveOption(service, "opportunity", "new_salesstage", SALESSTAGE_LOST_LABEL);
+				int dealLost = ResolveOption(service, DEAL_ENTITY, "new_dealstatus", DEALSTATUS_LOST_LABEL);
+				Console.WriteLine("Resolved sales stage '" + SALESSTAGE_LOST_LABEL + "' = " + stageLost);
+				Console.WriteLine("Resolved deal status '" + DEALSTATUS_LOST_LABEL + "' = " + dealLost + "\n");
+
+				// One lookup of the season's inventory, by name, instead of a query per line.
+				Dictionary<string, Guid> inventory = LoadInventory(service, season.Id);
+				Console.WriteLine("Season inventory: " + inventory.Count + " item(s).\n");
+
+				foreach (var group in lines.GroupBy(l => l.Client).OrderBy(g => g.Key))
+				{
+					var o = new Outcome { Client = group.Key };
+					report.Add(o);
+					Console.WriteLine("===== " + group.Key + " =====");
+
+					if (SKIP_CLIENTS.Contains(group.Key))
+					{
+						o.Status = "SKIPPED";
+						o.Detail = "already has records in Dynamics - waiting on Ray";
+						Console.WriteLine("  Skipped: " + o.Detail + "\n");
+						continue;
+					}
+
+					EntityReference account = FindAccount(service, group.Key);
+					if (account == null)
+					{
+						if (!CREATE_MISSING_ACCOUNTS)
+						{
+							o.Status = "NO ACCOUNT";
+							o.Detail = "no account matched '" + group.Key + "'";
+							Console.WriteLine("  " + o.Detail + " - skipped.\n");
+							continue;
+						}
+						if (!DRY_RUN)
+						{
+							Guid newAcc = service.Create(new Entity("account") { ["name"] = group.Key });
+							account = new EntityReference("account", newAcc) { Name = group.Key };
+						}
+						Console.WriteLine("  Account created.");
+					}
+
+					if (account != null && DealExists(service, account.Id, season.Id))
+					{
+						o.Status = "EXISTS";
+						o.Detail = "a 2026 deal already exists for this account";
+						Console.WriteLine("  " + o.Detail + " - skipped.\n");
+						continue;
+					}
+
+					decimal total = group.Sum(l => l.Fees ?? 0m);
+					o.Total = total;
+					int willCreate = group.Count(l => !string.IsNullOrWhiteSpace(l.InventoryName)
+						&& inventory.ContainsKey(Key(l.InventoryName)));
+					int willSkip = group.Count() - willCreate;
+
+					Console.WriteLine("  Account : " + (account == null ? "(would be created)" : account.Name));
+					Console.WriteLine("  Total   : " + total.ToString("C", CultureInfo.GetCultureInfo("en-US")));
+					Console.WriteLine("  Lines   : " + willCreate + " to create, " + willSkip + " without a mapped item");
+
+					foreach (var l in group.Where(x => string.IsNullOrWhiteSpace(x.InventoryName)
+						|| !inventory.ContainsKey(Key(x.InventoryName))))
+					{
+						unmapped.Add(l);
+					}
+
+					if (DRY_RUN || account == null)
+					{
+						o.Status = "WOULD CREATE";
+						o.LinesCreated = willCreate;
+						o.LinesSkipped = willSkip;
+						Console.WriteLine();
+						continue;
+					}
+
+					Guid oppId = CreateOpportunity(service, account, season, group.Key, total, stageLost);
+					Guid dealId = CreateDeal(service, account, season, oppId, group.Key, dealLost);
+
+					foreach (GridLine l in group)
+					{
+						if (string.IsNullOrWhiteSpace(l.InventoryName)
+							|| !inventory.ContainsKey(Key(l.InventoryName)))
+						{
+							o.LinesSkipped++;
+							continue;
+						}
+						CreateLine(service, dealId, inventory[Key(l.InventoryName)], l);
+						o.LinesCreated++;
+					}
+
+					if (ALSO_CLOSE_OPPORTUNITY_STATE)
+					{
+						service.Execute(new Microsoft.Crm.Sdk.Messages.SetStateRequest
+						{
+							EntityMoniker = new EntityReference("opportunity", oppId),
+							State = new OptionSetValue(2),   // Lost
+							Status = new OptionSetValue(4)   // Lost
+						});
+					}
+
+					o.Status = "CREATED";
+					o.Detail = "opp " + oppId + " / deal " + dealId;
+					Console.WriteLine("  Created. " + o.Detail + "\n");
+				}
+
+				WriteReport(report, unmapped);
+
+				Console.WriteLine("=========================================================");
+				Console.WriteLine(DRY_RUN ? "  DRY RUN COMPLETE - nothing was written" : "  LOAD COMPLETE");
+				Console.WriteLine("  Clients created : " + report.Count(r => r.Status == "CREATED" || r.Status == "WOULD CREATE"));
+				Console.WriteLine("  Skipped         : " + report.Count(r => r.Status == "SKIPPED"));
+				Console.WriteLine("  No account      : " + report.Count(r => r.Status == "NO ACCOUNT"));
+				Console.WriteLine("  Already existed : " + report.Count(r => r.Status == "EXISTS"));
+				Console.WriteLine("  Lines to create : " + report.Sum(r => r.LinesCreated));
+				Console.WriteLine("  Lines unmapped  : " + report.Sum(r => r.LinesSkipped));
+				Console.WriteLine("=========================================================");
+				if (DRY_RUN) Console.WriteLine("\nSet DRY_RUN = false to apply these changes.");
+			}
+			catch (Exception ex)
+			{
+				Console.ForegroundColor = ConsoleColor.Red;
+				Console.WriteLine("\nERROR: " + ex.Message);
+				Console.ResetColor();
+				Console.WriteLine(ex.StackTrace);
+			}
+
+			Console.WriteLine("\nPress Enter to exit...");
+			Console.ReadLine();
+		}
+
+		// -----------------------------------------------------------------
+		private static string Key(string s)
+		{
+			return new string((s ?? "").ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+		}
+
+		private static List<GridLine> ReadInput(string path)
+		{
+			var list = new List<GridLine>();
+			string[] all = File.ReadAllLines(path, Encoding.UTF8);
+			if (all.Length == 0) return list;
+
+			string[] header = all[0].Split('\t');
+			Func<string, int> col = name => Array.FindIndex(header,
+				h => string.Equals(h.Trim(), name, StringComparison.OrdinalIgnoreCase));
+
+			int cClient = col("Client"), cDel = col("Deliverable"), cQty = col("Qty"),
+				cRate = col("Rate"), cFees = col("Fees"), cInv = col("InventoryItem");
+
+			for (int i = 1; i < all.Length; i++)
+			{
+				if (string.IsNullOrWhiteSpace(all[i])) continue;
+				string[] f = all[i].Split('\t');
+				Func<int, string> get = j => (j >= 0 && j < f.Length) ? f[j].Trim() : "";
+				Func<int, decimal?> num = j =>
+				{
+					decimal d;
+					return decimal.TryParse(get(j), NumberStyles.Any, CultureInfo.InvariantCulture, out d)
+						? (decimal?)d : null;
+				};
+				list.Add(new GridLine
+				{
+					Client = get(cClient),
+					Deliverable = get(cDel),
+					Qty = num(cQty),
+					Rate = num(cRate),
+					Fees = num(cFees),
+					InventoryName = get(cInv)
+				});
+			}
+			return list;
+		}
+
+		private static int ResolveOption(IOrganizationService svc, string entity, string attribute, string label)
+		{
+			var resp = (RetrieveAttributeResponse)svc.Execute(new RetrieveAttributeRequest
+			{
+				EntityLogicalName = entity,
+				LogicalName = attribute,
+				RetrieveAsIfPublished = true
+			});
+
+			var meta = resp.AttributeMetadata as EnumAttributeMetadata;
+			if (meta == null)
+				throw new Exception(entity + "." + attribute + " is not an option set.");
+
+			var options = meta.OptionSet.Options
+				.Select(o => new { Value = o.Value ?? -1, Label = (o.Label.UserLocalizedLabel != null ? o.Label.UserLocalizedLabel.Label : "") })
+				.ToList();
+
+			var hit = options.FirstOrDefault(o =>
+				o.Label.IndexOf(label, StringComparison.OrdinalIgnoreCase) >= 0);
+
+			if (hit == null)
+				throw new Exception("No option on " + entity + "." + attribute + " matches '" + label
+					+ "'. Available: " + string.Join(" | ", options.Select(o => o.Value + "=" + o.Label)));
+
+			return hit.Value;
+		}
+
+		private static EntityReference FindSeason(IOrganizationService svc, string name)
+		{
+			var q = new QueryExpression(SEASON_ENTITY) { ColumnSet = new ColumnSet("new_name") };
+			q.Criteria.AddCondition("new_name", ConditionOperator.Equal, name);
+			q.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0);
+			Entity e = svc.RetrieveMultiple(q).Entities.FirstOrDefault();
+			return e == null ? null : new EntityReference(SEASON_ENTITY, e.Id) { Name = name };
+		}
+
+		private static EntityReference FindAccount(IOrganizationService svc, string client)
+		{
+			var q = new QueryExpression("account") { ColumnSet = new ColumnSet("name") };
+			q.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0);
+			var all = svc.RetrieveMultiple(q).Entities;
+
+			string k = Key(client);
+			Entity exact = all.FirstOrDefault(a => Key(a.GetAttributeValue<string>("name")) == k);
+			if (exact != null)
+				return new EntityReference("account", exact.Id) { Name = exact.GetAttributeValue<string>("name") };
+
+			// Containment, but only one candidate. Two candidates means a human has to choose.
+			var near = all.Where(a =>
+			{
+				string ak = Key(a.GetAttributeValue<string>("name"));
+				return ak.Length >= 6 && k.Length >= 6 && (ak.Contains(k) || k.Contains(ak));
+			}).ToList();
+
+			if (near.Count == 1)
+				return new EntityReference("account", near[0].Id) { Name = near[0].GetAttributeValue<string>("name") };
+
+			return null;
+		}
+
+		private static bool DealExists(IOrganizationService svc, Guid accountId, Guid seasonId)
+		{
+			var q = new QueryExpression(DEAL_ENTITY) { ColumnSet = new ColumnSet("new_name") };
+			q.Criteria.AddCondition("new_accountid", ConditionOperator.Equal, accountId);
+			q.Criteria.AddCondition("new_season", ConditionOperator.Equal, seasonId);
+			return svc.RetrieveMultiple(q).Entities.Count > 0;
+		}
+
+		private static Dictionary<string, Guid> LoadInventory(IOrganizationService svc, Guid seasonId)
+		{
+			var map = new Dictionary<string, Guid>();
+			var q = new QueryExpression(INVENTORY_ENTITY)
+			{
+				ColumnSet = new ColumnSet("new_name"),
+				PageInfo = new PagingInfo { Count = 500, PageNumber = 1 }
+			};
+			q.Criteria.AddCondition("new_seasonid", ConditionOperator.Equal, seasonId);
+			q.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0);
+
+			while (true)
+			{
+				EntityCollection page = svc.RetrieveMultiple(q);
+				foreach (Entity e in page.Entities)
+				{
+					string k = Key(e.GetAttributeValue<string>("new_name"));
+					if (k.Length > 0 && !map.ContainsKey(k)) map[k] = e.Id;
+				}
+				if (!page.MoreRecords) break;
+				q.PageInfo.PageNumber++;
+				q.PageInfo.PagingCookie = page.PagingCookie;
+			}
+			return map;
+		}
+
+		private static Guid CreateOpportunity(IOrganizationService svc, EntityReference account,
+			EntityReference season, string client, decimal total, int stageLost)
+		{
+			var opp = new Entity("opportunity");
+			opp["name"] = client + " - 2026 - Storm";
+			opp["parentaccountid"] = account;
+			opp["new_basketballseason"] = season;
+			opp["new_salesstage"] = new OptionSetValue(stageLost);
+			opp["estimatedvalue"] = new Money(total);
+			opp["description"] = "Created from the 2026 closed-lost pricing grid.";
+			return svc.Create(opp);
+		}
+
+		private static Guid CreateDeal(IOrganizationService svc, EntityReference account,
+			EntityReference season, Guid oppId, string client, int dealLost)
+		{
+			var deal = new Entity(DEAL_ENTITY);
+			deal["new_accountid"] = account;
+			deal["new_season"] = season;
+			deal["new_opportunity"] = new EntityReference("opportunity", oppId);
+			deal["new_dealstatus"] = new OptionSetValue(dealLost);
+
+			Guid id = svc.Create(deal);
+
+			// Pl.Deal.SetName runs pre-op on Create and rebuilds new_name from Account + Season,
+			// discarding whatever we send. The name has to be set afterwards.
+			svc.Update(new Entity(DEAL_ENTITY, id) { ["new_name"] = client + " - 2026 - Storm" });
+			return id;
+		}
+
+		private static void CreateLine(IOrganizationService svc, Guid dealId, Guid inventoryId, GridLine l)
+		{
+			var line = new Entity(LINE_ENTITY);
+			line["new_dealid"] = new EntityReference(DEAL_ENTITY, dealId);
+			line["new_inventory"] = new EntityReference(INVENTORY_ENTITY, inventoryId);
+			if (l.Qty.HasValue) line["new_quantity"] = l.Qty.Value;
+			if (l.Rate.HasValue) line["new_rate"] = new Money(l.Rate.Value);
+			// new_total is computed by the InventoryManagement pre-op step from quantity x rate.
+			// Writing it here would be overwritten, so it is left alone.
+			svc.Create(line);
+		}
+
+		private static void WriteReport(List<Outcome> report, List<GridLine> unmapped)
+		{
+			string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+			string dir = AppDomain.CurrentDomain.BaseDirectory;
+
+			string p1 = Path.Combine(dir, "ClosedLostGrids_Report_" + stamp + ".csv");
+			using (var w = new StreamWriter(p1, false, Encoding.UTF8))
+			{
+				w.WriteLine("Client,Status,Detail,LinesCreated,LinesUnmapped,Total");
+				foreach (Outcome o in report)
+					w.WriteLine(Csv(o.Client) + "," + Csv(o.Status) + "," + Csv(o.Detail) + ","
+						+ o.LinesCreated + "," + o.LinesSkipped + ","
+						+ o.Total.ToString(CultureInfo.InvariantCulture));
+			}
+
+			string p2 = Path.Combine(dir, "ClosedLostGrids_Unmapped_" + stamp + ".csv");
+			using (var w = new StreamWriter(p2, false, Encoding.UTF8))
+			{
+				w.WriteLine("Client,Deliverable,Qty,Rate,Fees,InventoryItemGiven");
+				foreach (GridLine l in unmapped)
+					w.WriteLine(Csv(l.Client) + "," + Csv(l.Deliverable) + ","
+						+ (l.Qty.HasValue ? l.Qty.Value.ToString(CultureInfo.InvariantCulture) : "") + ","
+						+ (l.Rate.HasValue ? l.Rate.Value.ToString(CultureInfo.InvariantCulture) : "") + ","
+						+ (l.Fees.HasValue ? l.Fees.Value.ToString(CultureInfo.InvariantCulture) : "") + ","
+						+ Csv(l.InventoryName));
+			}
+
+			Console.WriteLine("\nReport   : " + p1);
+			Console.WriteLine("Unmapped : " + p2 + "  (" + unmapped.Count + " row(s) for Storm to map)\n");
+		}
+
+		private static string Csv(string s)
+		{
+			s = s ?? "";
+			return s.Contains(",") || s.Contains("\"") ? "\"" + s.Replace("\"", "\"\"") + "\"" : s;
+		}
+	}
+}
