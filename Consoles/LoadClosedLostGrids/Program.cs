@@ -49,21 +49,14 @@ namespace LoadClosedLostGrids
 		// Clients whose records already exist in Dynamics under some other status. Creating a
 		// second record for them is a decision for Ray, not for this console, so they stay out
 		// until he answers. Remove a name from this list once he does.
+		// Nothing is on hold any more. Tiffany confirmed on 2026-09-23 that the grids should
+		// attach to the existing records, get their deal lines, and then be marked Closed Lost,
+		// and on 2026-09-24 she said Bonneville is Bonneville International. Kept as an empty
+		// dictionary rather than deleted, because the next batch of grids will need it again.
+		// Empty again. Tiffany cleared the last three on 2026-09-25: their deals may be moved to
+		// the 2026 - Storm season. Kept rather than deleted, the next batch of grids will need it.
 		private static readonly Dictionary<string, string> SKIP_CLIENTS = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
 		{
-			{ "Amazon Fashion", "already has records in Dynamics - asked Nate/Tiffany" },
-			{ "KIA", "already has records in Dynamics - asked Nate/Tiffany" },
-			{ "SGB Law", "already has records in Dynamics - asked Nate/Tiffany" },
-			{ "Lucky Strike", "already has records in Dynamics - asked Nate/Tiffany" },
-			{ "State Street", "already has records in Dynamics - asked Nate/Tiffany" },
-			// BECU is a sixth case of the same kind, and a harder one: this grid is an UPSELL on an
-			// account that already carries a live 2026 deal worth $1.19M. It must not be loaded as
-			// a plain second deal without Ray saying how it should sit beside the existing one.
-			// Bonneville is a different kind of blocked. No account matches it exactly, but TWO
-			// come close - "Bonneville International" and "Bonneville Resort & Spa" - and the grid
-			// does not tell them apart: LEDs, banner ads, a videoboard feature, a suite and
-			// tickets would suit either. Tiffany owns this grid, so she decides.
-			{ "Bonneville", "two possible accounts, International or Resort & Spa - asked Tiffany" }
 		};
 
 		// Upsells to an existing partner. Ray settled this on 2026-09-24 for BECU and framed it as
@@ -84,7 +77,13 @@ namespace LoadClosedLostGrids
 		// The grid's client name is not always the account name.
 		private static readonly Dictionary<string, string> ACCOUNT_OVERRIDES = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
 		{
-			{ "BECU Upsell", "BECU" }
+			{ "BECU Upsell", "BECU" },
+			// Two accounts nearly match this grid. Tiffany confirmed which: the one whose contact
+			// is Rachelle Severns.
+			{ "Bonneville", "Bonneville International" },
+			// Two Kia accounts exist. Tiffany: "Please use Kia Motors America for mine", which is
+			// also the account her existing deal hangs from.
+			{ "KIA", "Kia Motors America, Inc." }
 		};
 
 		// An account that does not exist is reported, not invented - that is how duplicate accounts
@@ -303,12 +302,13 @@ namespace LoadClosedLostGrids
 
 					decimal total = group.Sum(l => l.Fees ?? 0m);
 					o.Total = total;
-					// Counted over DISTINCT inventory items, because a deal carries one line per
-					// item. Counting rows made the dry run promise more lines than a live run
-					// creates, which is how a collapsed row went unnoticed the first time.
-					int willCreate = group.Where(l => !string.IsNullOrWhiteSpace(l.InventoryName)
-						&& inventory.ContainsKey(Key(l.InventoryName)))
-						.Select(l => inventory[Key(l.InventoryName)]).Distinct().Count();
+					// Counted over ROWS, because a deal line now stands for a grid row and several
+					// lines may share an inventory item. This line is printed before the deal is
+					// even looked up, so it has to answer one question only: how many rows of this
+					// grid have an item we can resolve. Counting distinct items here, left over
+					// from the old rule, reported mapped rows as unmapped.
+					int willCreate = group.Count(l => !string.IsNullOrWhiteSpace(l.InventoryName)
+						&& inventory.ContainsKey(Key(l.InventoryName)));
 					int willSkip = group.Count() - willCreate;
 
 					Console.WriteLine("  Account : " + (account == null ? "(would be created)" : account.Name));
@@ -324,25 +324,30 @@ namespace LoadClosedLostGrids
 						unmapped.Add(l);
 					}
 
-					// Two different things look alike here and must not be confused, because the
-					// first run did confuse them and reported 16 finished lines as work to do:
-					//   preExisting  - the item is on the deal from an earlier run. Nothing to do,
-					//                  nothing to report. The row is DONE.
-					//   addedThisRun - a second row of this same grid wants an item another row
-					//                  already took. That one is a real problem and goes to Storm.
-					HashSet<Guid> preExisting = existingDeal.HasValue
-						? ExistingLineInventory(service, existingDeal.Value)
-						: new HashSet<Guid>();
-					var addedThisRun = new HashSet<Guid>();
+					// IDENTITY IS THE LINE NAME, NOT THE INVENTORY ITEM.
+					//
+					// The first design allowed one line per inventory item, so a second grid row
+					// pointing at the same item was dropped. Nate's mapping showed what that costs:
+					// on the BECU upsell he deliberately sent three different deliverables to
+					// "Cove Corner" and two to "Activation Fund", which would have silently
+					// discarded $100,000 of a $791,100 deal. And the rule was never a Dynamics
+					// constraint, it was mine, adopted to make re-runs safe.
+					//
+					// So a deal line now stands for a GRID ROW, named with Storm's own wording, and
+					// several lines may share an inventory item. Re-runs stay safe because the name
+					// identifies the line. Pl.DealLines.InventoryManagement never writes new_name,
+					// so the name is ours to rely on (checked before making it load-bearing).
+					Dictionary<string, Guid> existingByName;
+					Dictionary<Guid, List<Guid>> existingByInventory;
+					ExistingLines(service, existingDeal, out existingByName, out existingByInventory);
 
 					if (existingDeal.HasValue)
 					{
-						willCreate = group.Where(l => !string.IsNullOrWhiteSpace(l.InventoryName)
-							&& inventory.ContainsKey(Key(l.InventoryName)))
-							.Select(l => inventory[Key(l.InventoryName)])
-							.Distinct().Count(id => !preExisting.Contains(id));
+						willCreate = group.Count(l => !string.IsNullOrWhiteSpace(l.InventoryName)
+							&& inventory.ContainsKey(Key(l.InventoryName))
+							&& !existingByName.ContainsKey(Key(l.Deliverable)));
 						willSkip = group.Count() - willCreate;
-						Console.WriteLine("  Deal    : already exists (" + preExisting.Count
+						Console.WriteLine("  Deal    : already exists (" + existingByName.Count
 							+ " line(s) on it) - topping up " + willCreate + " line(s)");
 					}
 
@@ -366,6 +371,8 @@ namespace LoadClosedLostGrids
 						dealId = CreateDeal(service, account, season, oppId, dealName, dealLost);
 					}
 
+					var claimed = new HashSet<Guid>();
+
 					foreach (GridLine l in group)
 					{
 						if (string.IsNullOrWhiteSpace(l.InventoryName)
@@ -374,22 +381,35 @@ namespace LoadClosedLostGrids
 							o.LinesSkipped++;
 							continue;
 						}
-						Guid invId = inventory[Key(l.InventoryName)];
-						if (preExisting.Contains(invId)) continue;   // loaded on an earlier run, done
-						if (addedThisRun.Contains(invId))
+
+						// Already there under this exact name. Claim it, do not just skip it: an
+						// unclaimed line stays visible to the legacy branch below, and a later row
+						// sharing the same inventory item will "adopt" it and rename it. That is
+						// how Georgetown's $43,284 Milestone Moments line ended up labelled
+						// "Milestone Moments - social", which is an $8,325 row.
+						if (existingByName.ContainsKey(Key(l.Deliverable)))
 						{
-							// Two grid rows pointing at one inventory item. The deal can only carry
-							// one line per item, so the second cannot be created - but it must not
-							// vanish either: it is real money that nobody would ever see again.
-							// It goes to Storm with the rest, to be mapped to its own item.
-							l.Reason = "collapsed - another row on this deal already uses '"
-								+ l.InventoryName + "'";
-							unmapped.Add(l);
-							o.LinesSkipped++;
+							claimed.Add(existingByName[Key(l.Deliverable)]);
 							continue;
 						}
+
+						Guid invId = inventory[Key(l.InventoryName)];
+
+						// One-time migration. Lines written before this change were named after the
+						// inventory item. Such a line IS this row, so it is renamed rather than
+						// duplicated. Self-limiting: once renamed, the branch above catches it.
+						Guid legacyId;
+						if (TakeLegacyLine(existingByName, existingByInventory, claimed,
+							Key(l.InventoryName), invId, out legacyId))
+						{
+							service.Update(new Entity(LINE_ENTITY, legacyId) { ["new_name"] = l.Deliverable });
+							existingByName[Key(l.Deliverable)] = legacyId;
+							Console.WriteLine("    renamed existing line to '" + l.Deliverable + "'");
+							continue;
+						}
+
 						CreateLine(service, dealId, season, invId, l);
-						addedThisRun.Add(invId);
+						existingByName[Key(l.Deliverable)] = Guid.Empty;
 						o.LinesCreated++;
 					}
 
@@ -620,20 +640,9 @@ namespace LoadClosedLostGrids
 			return found.Count == 1 ? (Guid?)found[0].Id : null;
 		}
 
-		/// <summary>Inventory already represented on a deal, so a top-up run never duplicates a line.</summary>
-		private static HashSet<Guid> ExistingLineInventory(IOrganizationService svc, Guid dealId)
-		{
-			var set = new HashSet<Guid>();
-			var q = new QueryExpression(LINE_ENTITY) { ColumnSet = new ColumnSet("new_inventory") };
-			q.Criteria.AddCondition("new_dealid", ConditionOperator.Equal, dealId);
-			foreach (Entity e in svc.RetrieveMultiple(q).Entities)
-			{
-				EntityReference r = e.GetAttributeValue<EntityReference>("new_inventory");
-				if (r != null) set.Add(r.Id);
-			}
-			return set;
-		}
-
+		/// <summary>
+		/// The season's inventory by normalised name. One query instead of one per grid row.
+		/// </summary>
 		private static Dictionary<string, Guid> LoadInventory(IOrganizationService svc, Guid seasonId)
 		{
 			var map = new Dictionary<string, Guid>();
@@ -658,6 +667,55 @@ namespace LoadClosedLostGrids
 				q.PageInfo.PagingCookie = page.PagingCookie;
 			}
 			return map;
+		}
+
+		/// <summary>
+		/// The lines already on a deal, indexed two ways: by name, which is how a row is matched to
+		/// its line, and by inventory item, which is only needed to recognise lines written before
+		/// the name became the identity.
+		/// </summary>
+		private static void ExistingLines(IOrganizationService svc, Guid? dealId,
+			out Dictionary<string, Guid> byName, out Dictionary<Guid, List<Guid>> byInventory)
+		{
+			byName = new Dictionary<string, Guid>();
+			byInventory = new Dictionary<Guid, List<Guid>>();
+			if (!dealId.HasValue) return;
+
+			var q = new QueryExpression(LINE_ENTITY) { ColumnSet = new ColumnSet("new_name", "new_inventory") };
+			q.Criteria.AddCondition("new_dealid", ConditionOperator.Equal, dealId.Value);
+
+			foreach (Entity e in svc.RetrieveMultiple(q).Entities)
+			{
+				string n = Key(e.GetAttributeValue<string>("new_name"));
+				if (n.Length > 0 && !byName.ContainsKey(n)) byName[n] = e.Id;
+
+				EntityReference r = e.GetAttributeValue<EntityReference>("new_inventory");
+				if (r == null) continue;
+				if (!byInventory.ContainsKey(r.Id)) byInventory[r.Id] = new List<Guid>();
+				byInventory[r.Id].Add(e.Id);
+			}
+		}
+
+		/// <summary>
+		/// Finds a line left over from the old naming, where the name was the inventory item rather
+		/// than the deliverable. Only one such line per item can be claimed, so two rows sharing an
+		/// item do not both try to adopt it.
+		/// </summary>
+		private static bool TakeLegacyLine(Dictionary<string, Guid> byName,
+			Dictionary<Guid, List<Guid>> byInventory, HashSet<Guid> claimed,
+			string inventoryKey, Guid inventoryId, out Guid lineId)
+		{
+			lineId = Guid.Empty;
+			if (!byName.ContainsKey(inventoryKey)) return false;
+
+			Guid candidate = byName[inventoryKey];
+			if (claimed.Contains(candidate)) return false;
+			if (!byInventory.ContainsKey(inventoryId) || !byInventory[inventoryId].Contains(candidate)) return false;
+
+			claimed.Add(candidate);
+			byName.Remove(inventoryKey);
+			lineId = candidate;
+			return true;
 		}
 
 		private static Guid CreateOpportunity(IOrganizationService svc, EntityReference account,
@@ -704,7 +762,7 @@ namespace LoadClosedLostGrids
 			Guid inventoryId, GridLine l)
 		{
 			var line = new Entity(LINE_ENTITY);
-			line["new_name"] = l.InventoryName;
+			line["new_name"] = l.Deliverable;
 			line["new_dealid"] = new EntityReference(DEAL_ENTITY, dealId);
 			line["new_inventory"] = new EntityReference(INVENTORY_ENTITY, inventoryId);
 			line["new_seasonid"] = season;
