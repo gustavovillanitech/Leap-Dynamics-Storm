@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xrm.Sdk;
@@ -18,8 +18,10 @@ namespace Pl.DealLines.InventoryManagement
 	///  - Per Game Rate      -> writes Incremental Rate per Home/Away Game on each line. The
 	///                          deal-level rate is what gets split, so the per-game story stays
 	///                          intact and the line's revenue is still rate x incremental games.
-	///  - Itemized / Flat    -> writes Incremental Revenue on each line directly, because there
+	///  - Flat Amount        -> writes Incremental Revenue on each line directly, because there
 	///                          is no per-game rate for the amount to come from.
+	///  - Itemized by Line   -> REFUSED. The amounts were agreed and typed line by line; running
+	///                          this would replace all of them and leave no trace on the deal.
 	///
 	/// Either way the parts add up to the contract value exactly: the rounding remainder is
 	/// given to the largest line rather than left to drift.
@@ -43,6 +45,7 @@ namespace Pl.DealLines.InventoryManagement
 		private const int CLAUSE_IN = 100000000;
 		private const int CLAUSE_OPT_IN = 100000001;
 		private const int METHOD_PER_GAME_RATE = 100000000;
+		private const int METHOD_ITEMIZED_BY_LINE = 100000001;
 
 		public void Execute(IServiceProvider serviceProvider)
 		{
@@ -71,6 +74,23 @@ namespace Pl.DealLines.InventoryManagement
 			{
 				throw new InvalidPluginExecutionException(
 					"This deal has no incremental games clause to distribute. Set the Incremental Games Clause to In or Opt-In first.");
+			}
+
+			// Itemized by Line means the amount was agreed line by line and typed in by hand.
+			// Distributing would recalculate the whole allocation and replace every one of those
+			// figures, and the deal-level Total Incremental Revenue and Unallocated Variance would
+			// not move at all, so nothing on the form would show that it happened. Proven in
+			// sandbox on 2026-09-29: a manual 5,000 / 3,000 / 2,000 came back as
+			// 6,058.03 / 3,029.02 / 912.95 with both deal figures unchanged.
+			OptionSetValue methodCheck = deal.GetAttributeValue<OptionSetValue>("new_incrementalpricingmethod");
+			if (methodCheck != null && methodCheck.Value == METHOD_ITEMIZED_BY_LINE)
+			{
+				throw new InvalidPluginExecutionException(
+					"This deal is set to Itemized by Line, which means each deal line carries the amount that " +
+					"was agreed for it. Distributing would overwrite every one of those amounts with a " +
+					"proportional share, and nothing on the deal would show that it happened. " +
+					"Enter the amounts on the deal lines instead, or switch Incremental Pricing Method to " +
+					"Flat Amount or Per Game Rate if you want them calculated for you.");
 			}
 
 			decimal contractValue = GetMoney(deal, "new_incrementalcontractvalue");

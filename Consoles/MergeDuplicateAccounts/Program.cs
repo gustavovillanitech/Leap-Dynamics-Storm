@@ -1,4 +1,4 @@
-using Microsoft.Crm.Sdk.Messages;
+﻿using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using Microsoft.Xrm.Tooling.Connector;
@@ -26,8 +26,8 @@ namespace MergeDuplicateAccounts
     {
         // ============================ CONFIGURATION ============================
         private const string EnvUrl = "https://stormbasketball.crm.dynamics.com/";
-        private const string UserName = "FanInteractive@stormbasketball.com";
-        private const string Password = "CsCXbm2E-WtQ3c4DCy2!";
+        // Interactive sign-in. The username and password that used to sit here were a
+        // production account's, in a git repo. Removed 2026-09-29; rotate that password.
         private const string AppId = "51f81489-12ee-4a9e-aaae-a2591f45987d";
         private const string RedirectUri = "app://58145B91-0C36-4500-8554-080854F2AC97";
 
@@ -51,14 +51,26 @@ namespace MergeDuplicateAccounts
         {
             new MergePair
             {
-                Label = "Premera Blue Cross",
-                // Covers both spellings seen in the meeting notes ("Primera" / "Premera").
-                SearchTerm = "Primera|Premera",
-                // Discovery first: pick master = the account with the real deal(s)/history,
-                // subordinate = the duplicate to merge in. Target name should end as "Premera Blue Cross".
+                // Tiffany, 2026-09-24: "Please use Kia Motors America for mine".
+                // Discovery 2026-09-29 found three accounts matching "Kia":
+                //   Kia Motors America, Inc.  1 deal (15 lines), 2 contacts, 2 opps  -> MASTER
+                //   Kia                       0 deals, 0 contacts, 1 opp            -> SUBORDINATE
+                //   KIA / Toyota of Puyallup  a Puyallup car dealership. DIFFERENT COMPANY,
+                //                             left alone. A shared prefix is not a duplicate.
+                // MERGED IN PRODUCTION 2026-09-29. The GUIDs are left here commented out so the
+                // pair runs as DISCOVERY again: a re-run now confirms the end state instead of
+                // attempting a merge that is already done.
+                //   MasterId      = new Guid("aef647da-b8b5-e711-810f-3863bb3cf378")
+                //   SubordinateId = new Guid("15cdec85-4e0c-f111-8406-000d3a3ac02f")
+                Label = "Kia",
+                SearchTerm = "Kia",
                 MasterId = Guid.Empty,
                 SubordinateId = Guid.Empty
             },
+            // Premera was checked on 2026-09-29 and needs NO merge. The two duplicate "Premera"
+            // records are already Inactive and hold nothing at all, which is exactly where a
+            // merge would leave them. "LifeWise (Premera)" is a different brand with 6 contacts
+            // and 3 opportunities of its own. Removed so a re-run does not touch them.
         };
         // ======================================================================
 
@@ -76,7 +88,7 @@ namespace MergeDuplicateAccounts
             Console.WriteLine("Type 'Y' to continue, anything else to cancel:");
             if ((Console.ReadLine() ?? "").Trim().ToUpperInvariant() != "Y") { Bye("Cancelled."); return; }
 
-            string cs = $"AuthType=OAuth;Url={EnvUrl};Username={UserName};Password={Password};" +
+            string cs = $"AuthType=OAuth;Url={EnvUrl};" +
                         $"AppId={AppId};RedirectUri={RedirectUri};LoginPrompt=Auto";
             Console.WriteLine("\nConnecting to Dynamics 365...");
             var service = new CrmServiceClient(cs);
@@ -157,11 +169,19 @@ namespace MergeDuplicateAccounts
             if (p.DuplicateDealIdToDelete != Guid.Empty)
                 Console.WriteLine($"    THEN DELETE deal     : {p.DuplicateDealIdToDelete}");
 
+            // The merge reparents the subordinate's opportunities onto the master, it does not
+            // reconcile them. If the same pursuit exists on both sides you end up with two rows
+            // for one thing, so both lists are printed before the confirmation prompt.
+            Console.WriteLine("\n    Opportunities that will REMAIN on the master:");
+            ListOpportunities(svc, master.Id);
+            Console.WriteLine("    Opportunities that will MOVE from the subordinate:");
+            ListOpportunities(svc, sub.Id);
+
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"\n  About to MERGE '{Name(sub)}' INTO '{Name(master)}' (subordinate will be deactivated).");
             Console.ResetColor();
-            Console.Write("  Type MERGE (all caps) to proceed, anything else to skip this pair: ");
-            if ((Console.ReadLine() ?? "") != "MERGE") { Console.WriteLine("  Skipped."); return; }
+            Console.Write("  Type MERGE to proceed, anything else to skip this pair: ");
+            if ((Console.ReadLine() ?? "").Trim().ToUpperInvariant() != "MERGE") { Console.WriteLine("  Skipped."); return; }
 
             var merge = new MergeRequest
             {
@@ -183,7 +203,7 @@ namespace MergeDuplicateAccounts
             if (p.DuplicateDealIdToDelete != Guid.Empty)
             {
                 Console.Write($"  Delete duplicate deal {p.DuplicateDealIdToDelete}? Type DELETE to confirm: ");
-                if ((Console.ReadLine() ?? "") == "DELETE")
+                if ((Console.ReadLine() ?? "").Trim().ToUpperInvariant() == "DELETE")
                 {
                     try { svc.Delete(DealEntity, p.DuplicateDealIdToDelete); Console.WriteLine("  Deal deleted."); }
                     catch (Exception ex) { Console.WriteLine($"  Deal delete FAILED: {ex.Message}"); }
@@ -212,6 +232,30 @@ namespace MergeDuplicateAccounts
                 string tag = d.Id == knownOrphanDealId ? "  <-- ORPHAN duplicate (delete after merge)"
                            : lines > 0 ? "  <-- has lines (likely the real deal -> MASTER)" : "";
                 Console.WriteLine($"        deal: '{nm}'  [{d.Id}]  lines={lines}{tag}");
+            }
+        }
+
+        /// <summary>Opportunity name, stage and estimated value for one account. Printed in the
+        /// dry-run preview so a duplicate pursuit is visible before the merge is confirmed.</summary>
+        private static void ListOpportunities(IOrganizationService svc, Guid accountId)
+        {
+            var q = new QueryExpression("opportunity")
+            {
+                ColumnSet = new ColumnSet("name", "estimatedvalue", "statuscode", "createdon"),
+                Criteria = new FilterExpression
+                {
+                    Conditions = { new ConditionExpression("parentaccountid", ConditionOperator.Equal, accountId) }
+                }
+            };
+            var opps = svc.RetrieveMultiple(q).Entities;
+            if (opps.Count == 0) { Console.WriteLine("        (none)"); return; }
+            foreach (Entity o in opps)
+            {
+                string nm = o.Contains("name") ? Convert.ToString(o["name"]) : "(no name)";
+                string status = o.FormattedValues.Contains("statuscode") ? o.FormattedValues["statuscode"] : "?";
+                string val = o.FormattedValues.Contains("estimatedvalue") ? o.FormattedValues["estimatedvalue"] : "";
+                string created = o.Contains("createdon") ? ((DateTime)o["createdon"]).ToString("yyyy-MM-dd") : "?";
+                Console.WriteLine($"        '{nm}'  [{status}]  {val}  created={created}");
             }
         }
 

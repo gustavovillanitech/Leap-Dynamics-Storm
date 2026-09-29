@@ -79,6 +79,20 @@ namespace Pl.DealLines.InventoryManagement
 					{
 						Entity preImage = context.PreEntityImages.Contains("PreImage") ? context.PreEntityImages["PreImage"] : new Entity(entityName);
 						HandleDealStatusChange(target, preImage, service, tracingService);
+
+						// Incremental Contract Value is typed on the DEAL, but the variance that
+						// reconciles it was only ever written from the deal-line side. An AM who
+						// switched the clause on, typed the agreed amount and saved was left with
+						// both Total Incremental Revenue and Unallocated Variance EMPTY - not zero,
+						// empty - which reads as "the system did not take it".
+						//
+						// No recursion: the update issued below carries only the two incremental
+						// fields, never new_incrementalcontractvalue, so this branch does not
+						// re-enter. The depth check is a second line of defence.
+						if (target.Contains("new_incrementalcontractvalue") && context.Depth <= 1)
+						{
+							RecalculateIncrementalVariance(target.Id, service, tracingService);
+						}
 					}
 				}
 			}
@@ -395,6 +409,53 @@ namespace Pl.DealLines.InventoryManagement
 
 			Money money = aliased.Value as Money;
 			return money != null ? money.Value : 0m;
+		}
+
+		/// <summary>
+		/// Rewrites only the two incremental figures on a Deal, from the amounts its lines carry.
+		/// Used when the Contract Value changes on the deal itself, where the deal-line rollup
+		/// never runs. Deliberately narrower than RollupTotalsToParentDeal: it leaves new_total
+		/// and Max Activation Spend alone, so saving a deal cannot quietly restate its value.
+		/// </summary>
+		private void RecalculateIncrementalVariance(Guid dealId, IOrganizationService service, ITracingService tracing)
+		{
+			try
+			{
+				string fetchXml = $@"
+                        <fetch aggregate='true'>
+                            <entity name='new_deallines'>
+                            <attribute name='new_incrementalrevenue' alias='sum_incremental' aggregate='sum' />
+                            <filter>
+                                <condition attribute='new_dealid' operator='eq' value='{dealId}' />
+                            </filter>
+                            </entity>
+                        </fetch>";
+
+				EntityCollection result = service.RetrieveMultiple(new FetchExpression(fetchXml));
+				decimal allocated = result.Entities.Count > 0
+					? GetAggregatedMoney(result.Entities[0], "sum_incremental")
+					: 0m;
+
+				decimal contractValue = GetDealIncrementalContractValue(dealId, service, tracing);
+
+				// Same rule as the deal-line rollup: with no contract value there is nothing to
+				// reconcile against, so the variance is zero rather than a negative of the lines.
+				decimal variance = contractValue == 0m ? 0m : contractValue - allocated;
+
+				Entity dealToUpdate = new Entity("new_deals", dealId);
+				dealToUpdate["new_totalincrementalrevenue"] = new Money(allocated);
+				dealToUpdate["new_unallocatedvariance"] = new Money(variance);
+				service.Update(dealToUpdate);
+
+				tracing.Trace($"Incremental variance refreshed on deal {dealId} -> " +
+							  $"ContractValue: {contractValue}, Allocated: {allocated}, Variance: {variance}");
+			}
+			catch (Exception ex)
+			{
+				// Never block the save of the deal over this. The figure is refreshed again the
+				// next time any line on the deal is touched.
+				tracing.Trace($"RecalculateIncrementalVariance skipped: {ex.Message}");
+			}
 		}
 
 		/// <summary>

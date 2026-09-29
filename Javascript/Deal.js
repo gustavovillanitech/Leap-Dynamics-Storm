@@ -1,4 +1,4 @@
-var DealForm = DealForm || {};
+﻿var DealForm = DealForm || {};
  
 // --- Event Handlers ---
  
@@ -594,6 +594,15 @@ DealForm.setSectionVisibleByName = function (formContext, sectionName, visible) 
 DealForm.onIncrementalGamesTriggerChange = function (executionContext) {
     DealForm.applyIncrementalGamesRules(executionContext);
     DealForm.calculateIncrementalContractValue(executionContext);
+
+    // Switching the pricing method changes whether the Distribute button applies at all.
+    // Command bar enable rules are not re-evaluated on their own when an arbitrary field
+    // changes, so ask for it explicitly or the button lingers until the form is reloaded.
+    try {
+        executionContext.getFormContext().ui.refreshRibbon();
+    } catch (e) {
+        console.warn("onIncrementalGamesTriggerChange: refreshRibbon failed: " + e.message);
+    }
 };
 
 /**
@@ -825,6 +834,13 @@ DealForm.canDistributeIncrementalRevenue = function (primaryControl) {
 
         var clause = clauseAttr.getValue();
         if (clause !== cfg.CLAUSE_IN && clause !== cfg.CLAUSE_OPT_IN) return false;
+
+        // Itemized by Line means the amounts were agreed and typed line by line. The API
+        // refuses this case, so the button has no business being here: offering it would
+        // promise a distribution that cannot happen, and the confirmation dialog would state
+        // an amount before the refusal arrived.
+        var methodAttr = formContext.getAttribute("new_incrementalpricingmethod");
+        if (methodAttr && methodAttr.getValue() === cfg.METHOD_ITEMIZED) return false;
 
         var valueAttr = formContext.getAttribute("new_incrementalcontractvalue");
         var contractValue = valueAttr ? valueAttr.getValue() : null;
