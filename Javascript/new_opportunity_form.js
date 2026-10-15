@@ -192,8 +192,8 @@ OpportunityForm.filterTicketingStage = function(formContext) {
         100000001: [100000000, 100000001, 100000002, 100000007, 100000047, 100000005, 100000006], //Ticketing - Groups
         100000004: [100000000, 100000010, 100000011, 100000012, 100000013, 100000005, 100000006], //Ticketing - Premium Sales
         100000005: [100000000, 100000014, 100000015, 100000016, 100000017, 100000018, 100000019, 100000020, 100000021, 100000022, 100000006], //Ticketing - Premium Service
-        100000002: [100000031, 100000032, 100000033, 100000044, 100000045, 100000034, 100000037, 100000046, 100000039, 100000040, 100000036, 100000041, 100000042, 100000043], //Ticketing - Service
-        100000007: [100000031, 100000032, 100000033, 100000044, 100000045, 100000034, 100000037, 100000046, 100000039, 100000040, 100000036, 100000041, 100000042, 100000043] //Ticketing - Service
+        100000002: [100000031, 100000032, 100000033, 100000044, 100000045, 100000034, 100000037, 100000046, 100000039, 100000040, 100000036, 100000041, 100000048, 100000043], //Ticketing - Service
+        100000007: [100000032, 100000033, 100000043, 100000042] //Ticketing - Membership Renewal (Bryan 2026-10-05): Attempted Contact, Had Conversation, Closed - Opted Out, Closed - Auto Renewed
     };
     
     ctrl.clearOptions();
@@ -288,6 +288,17 @@ OpportunityForm.setRequiredFields = function(formContext) {
                 prodType !== 100000008) {
                 isSectionRequired = true;
             }
+        }
+
+        // RULE 6.1 (Ray 2026-10-02)
+        // Closed - Service Complete (100000048) always requires Section,
+        // even when the opp came from a phone call (Previous Phone Call GUID filled).
+        // Same product exclusions as RULE 6: Flexible Plans (100000011) and Deposit (100000008).
+        if (!isSectionRequired &&
+            stage === 100000048 &&
+            prodType !== 100000011 &&
+            prodType !== 100000008) {
+            isSectionRequired = true;
         }
 
         sectionAttr.setRequiredLevel(isSectionRequired ? "required" : "none");

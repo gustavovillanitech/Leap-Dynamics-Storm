@@ -98,6 +98,13 @@ namespace ApplyInventoryUpdates
         /// (CPA Garage). Left alone by default - Storm wants duplicates merged first.</summary>
         private static readonly string RemovalModeProductInUse = Cfg("RemovalModeProductInUse", "Report");
 
+        /// <summary>Rows whose product is a COMPONENT OF A PACKAGE. Added 2026-09-29 after three
+        /// items were retired from the 2026 sheet while still sitting inside 25 packages: the Deal
+        /// Line Builder leaves out a component that has no active inventory row WITHOUT telling the
+        /// seller, so 23 Entitlement Game packages were quietly one deliverable short and nobody
+        /// could see it. Delete is refused here for the same reason it is refused for a deal line.</summary>
+        private static readonly string RemovalModeInPackage = Cfg("RemovalModeInPackage", "Report");
+
         /// <summary>Season filter for the name fallback (same rule as Export2026Inventory).</summary>
         private const string SeasonFilter = "2026";
         private const bool StormSeasonsOnly = true;
@@ -191,7 +198,8 @@ namespace ApplyInventoryUpdates
             public bool FoundInCrm;
             public int DealLines; public List<string> Deals = new List<string>();
             public int DealLinesViaProduct;
-            public bool Safe { get { return FoundInCrm && DealLines == 0 && DealLinesViaProduct == 0; } }
+            public int Packages; public List<string> PackageNames = new List<string>();
+            public bool Safe { get { return FoundInCrm && DealLines == 0 && DealLinesViaProduct == 0 && Packages == 0; } }
         }
 
         // ---------------------------------------------------------------- main
@@ -886,6 +894,50 @@ namespace ApplyInventoryUpdates
                     Removal rm;
                     if (pRef != null && productToRemoval.TryGetValue(pRef.Id, out rm)) rm.DealLinesViaProduct++;
                 }
+
+            // Is the product a component of any package? Two inventory rows can share one product,
+            // so this map holds every removal per product rather than only the first.
+            var byProduct = new Dictionary<Guid, List<Removal>>();
+            foreach (Removal rm2 in removals.Where(r => r.Record != null))
+            {
+                var pr2 = rm2.Record.GetAttributeValue<EntityReference>(InvProduct);
+                if (pr2 == null) continue;
+                if (!byProduct.ContainsKey(pr2.Id)) byProduct[pr2.Id] = new List<Removal>();
+                byProduct[pr2.Id].Add(rm2);
+            }
+
+            if (byProduct.Count > 0)
+                foreach (Entity pc in QueryPackageComponents(svc, byProduct.Keys.ToList()))
+                {
+                    var cRef = pc.GetAttributeValue<EntityReference>("new_componentproduct");
+                    if (cRef == null || !byProduct.ContainsKey(cRef.Id)) continue;
+                    var pkg = pc.GetAttributeValue<EntityReference>("new_packageproduct");
+                    string pn = pkg == null ? "(package not set)"
+                              : (string.IsNullOrEmpty(pkg.Name) ? pkg.Id.ToString() : pkg.Name);
+                    foreach (Removal rm3 in byProduct[cRef.Id])
+                    {
+                        rm3.Packages++;
+                        if (!rm3.PackageNames.Contains(pn)) rm3.PackageNames.Add(pn);
+                    }
+                }
+        }
+
+        /// <summary>Package Components whose COMPONENT product is one of these. Answers the question
+        /// the deal-line checks cannot: retiring this item quietly shrinks a package.</summary>
+        private static List<Entity> QueryPackageComponents(IOrganizationService svc, List<Guid> productIds)
+        {
+            var all = new List<Entity>();
+            for (int i = 0; i < productIds.Count; i += 400)
+            {
+                object[] chunk = productIds.Skip(i).Take(400).Cast<object>().ToArray();
+                var q = new QueryExpression("new_packagecomponent")
+                {
+                    ColumnSet = new ColumnSet("new_packageproduct", "new_componentproduct", NameField),
+                    Criteria = { Conditions = { new ConditionExpression("new_componentproduct", ConditionOperator.In, chunk) } }
+                };
+                all.AddRange(RetrieveAll(svc, q));
+            }
+            return all;
         }
 
         private static List<Entity> QueryDealLines(IOrganizationService svc, string lookupField, List<Guid> ids)
@@ -910,6 +962,7 @@ namespace ApplyInventoryUpdates
         {
             if (!rm.FoundInCrm) return "Report";
             if (rm.DealLines > 0) return RemovalModeInUse;
+            if (rm.Packages > 0) return RemovalModeInPackage;
             if (rm.DealLinesViaProduct > 0) return RemovalModeProductInUse;
             return RemovalModeUnused;
         }
@@ -939,6 +992,17 @@ namespace ApplyInventoryUpdates
                     WhatWeNeed = $"Deleting it would break those deal lines, so it was {Did(ModeFor(rm))} instead - the deals stay intact and the item stops showing up for new ones."
                 };
 
+            if (rm.Packages > 0)
+                return new OpenItem
+                {
+                    ExcelRow = rm.ExcelRow.ToString(), Item = rm.Item, Topic = "Marked for removal - INSIDE A PACKAGE",
+                    WhatTheFileSays = says + $" It is a component of {rm.Packages} package(s): {string.Join("; ", rm.PackageNames)}.",
+                    WhatWeNeed = "Retiring it does NOT take it out of those packages. The Deal Line Builder simply leaves it "
+                               + "out when the package is added to a deal, with no warning, so the package would sell one "
+                               + "deliverable short. Tell us what each package should carry instead, or confirm it should just "
+                               + $"lose this item. It was {Did(ModeFor(rm))} in the meantime."
+                };
+
             if (rm.DealLinesViaProduct > 0)
                 return new OpenItem
                 {
@@ -951,7 +1015,7 @@ namespace ApplyInventoryUpdates
             return new OpenItem
             {
                 ExcelRow = rm.ExcelRow.ToString(), Item = rm.Item, Topic = "Marked for removal - not in use",
-                WhatTheFileSays = says + " It is not used on any deal line.",
+                WhatTheFileSays = says + " It is not used on any deal line and is not part of any package.",
                 WhatWeNeed = $"Nothing depends on it, so removing it is safe. Status: {done}."
             };
         }
@@ -1098,11 +1162,11 @@ namespace ApplyInventoryUpdates
                     bool wantDeactivate = mode.Equals("Deactivate", StringComparison.OrdinalIgnoreCase);
                     if (!wantDelete && !wantDeactivate) { left++; continue; }
 
-                    if (wantDelete && (rm.DealLines > 0 || rm.DealLinesViaProduct > 0))
+                    if (wantDelete && (rm.DealLines > 0 || rm.DealLinesViaProduct > 0 || rm.Packages > 0))
                     {
                         refused++;
-                        Say($"REFUSED delete on row {rm.ExcelRow} \"{rm.Item}\" - {rm.DealLines} deal line(s) " +
-                            $"and {rm.DealLinesViaProduct} product reference(s). Deactivate it instead.");
+                        Say($"REFUSED delete on row {rm.ExcelRow} \"{rm.Item}\" - {rm.DealLines} deal line(s), " +
+                            $"{rm.DealLinesViaProduct} product reference(s) and {rm.Packages} package(s). Deactivate it instead.");
                         continue;
                     }
 

@@ -20,7 +20,7 @@ namespace CloseStuckTicketingOpps
 	/// ROOT CAUSE. The background flow "Close Ticketing Opportunity" owns this transition, and
 	/// its trigger carries two conditions, not one:
 	///
-	///     new_ticketingstage IN (100000005, 100000006, 100000022, 100000029, 100000030, 100000043)
+	///     new_ticketingstage IN (100000005, 100000006, 100000022, 100000029, 100000030, 100000043, 100000048, 100000042)
 	///     AND new_previousphonecallguid == null
 	///
 	/// An opportunity that was worked from a logged phone call has a value in
@@ -35,6 +35,7 @@ namespace CloseStuckTicketingOpps
 	///   100000005 Closed Won              -> WinOpportunity,  statuscode 3, actualrevenue = estimatedvalue
 	///   100000022 9 - Experience Complete -> WinOpportunity,  statuscode 3, actualrevenue = estimatedvalue
 	///   100000029 11 - Closed Auto Renewed-> WinOpportunity,  statuscode 3, actualrevenue = estimatedvalue
+	///   100000048 Closed - Service Complete -> WinOpportunity, statuscode 3, actualrevenue = estimatedvalue
 	///   100000006 Closed Lost             -> LoseOpportunity, statuscode 4, actualrevenue = 0
 	///   100000030 12 - Closed Opted Out    -> LoseOpportunity, statuscode 4, actualrevenue = 0
 	///   100000043 Closed - Opted Out      -> LoseOpportunity, statuscode 4, actualrevenue = 0
@@ -86,6 +87,8 @@ namespace CloseStuckTicketingOpps
 			{ 100000005, true  }, // Closed Won
 			{ 100000022, true  }, // 9 - Experience Complete
 			{ 100000029, true  }, // 11 - Closed - Auto Renewed
+			{ 100000048, true  }, // Closed - Service Complete (Service stage list - added 2026-10-02)
+			{ 100000042, true  }, // Closed - Auto Renewed (Renewal stage list - added 2026-10-05)
 			{ 100000006, false }, // Closed Lost
 			{ 100000030, false }, // 12 - Closed - Opted Out
 			{ 100000043, false }  // Closed - Opted Out (Service stage list - added 2026-09-17)

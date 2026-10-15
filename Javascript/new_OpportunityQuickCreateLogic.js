@@ -43,6 +43,15 @@ OppQuickCreate.onControllingFieldChange = function(executionContext) {
 };
 
 /**
+ * OnChange handler for Ticketing Stage (register on new_ticketingstage)
+ * Only re-evaluates required fields, does not re-filter option lists.
+ */
+OppQuickCreate.onStageChange = function(executionContext) {
+    var formContext = executionContext.getFormContext();
+    OppQuickCreate.setRequiredFields(formContext);
+};
+
+/**
  * Master function to run all filtering logic
  */
 OppQuickCreate.applyFilters = function(formContext) {
@@ -108,7 +117,8 @@ OppQuickCreate.filterTicketingStage = function(formContext) {
             100000023, 100000024, 100000025, 100000026, 100000027, 
             100000028, 100000029, 100000030
         ]*/
-        100000002: [100000031, 100000032, 100000033, 100000044, 100000045, 100000034, 100000037, 100000046, 100000039, 100000040, 100000036, 100000041, 100000042, 100000043], //Ticketing - Service
+        100000002: [100000031, 100000032, 100000033, 100000044, 100000045, 100000034, 100000037, 100000046, 100000039, 100000040, 100000036, 100000041, 100000048, 100000043], //Ticketing - Service
+        100000007: [100000032, 100000033, 100000043, 100000042], //Ticketing - Membership Renewal (Bryan 2026-10-05)
     };
 
     ctrl.clearOptions();
@@ -168,6 +178,17 @@ OppQuickCreate.setRequiredFields = function(formContext) {
     }
 
     detailAttr.setRequiredLevel(isRequired ? "required" : "none");
+
+    // RULE 6.1 (Ray 2026-10-02) - same as the main form
+    // Closed - Service Complete (100000048) requires Section,
+    // except Product Type Flexible Plans (100000011) and Deposit (100000008).
+    var sectionAttr = formContext.getAttribute("new_section");
+    if (sectionAttr) {
+        var isSectionRequired = (stage === 100000048 &&
+                                 prodType !== 100000011 &&
+                                 prodType !== 100000008);
+        sectionAttr.setRequiredLevel(isSectionRequired ? "required" : "none");
+    }
 };
 
 /**
